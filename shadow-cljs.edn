@@ -1,6 +1,7 @@
 {:source-paths ["src"]
  :dependencies [[reagent "1.0.0-alpha2"]
-                [kee-frame "1.1.1"]]
+                [re-frame "1.1.2"]
+                [metosin/reitit "0.5.10"]]
 
  :dev-http {5000 "build/browser"}
  :nrepl {:port 8777}
