@@ -8,9 +8,11 @@
     "watch:app": "shadow-cljs watch app",
     "release:library": "shadow-cljs release library",
     "watch:library": "shadow-cljs watch library",
-    "release:browser": "shadow-cljs release browser",
+    "release:browser": "shadow-cljs release browser && sass",
     "watch:browser": "shadow-cljs watch browser",
-    "start:browser": "serve -s build/browser"
+    "start:browser": "serve -s build/browser",
+    "sass:watch": "sass src/sass/styles.scss build/browser/styles.css --watch",
+    "sass": "sass src/sass/styles.scss build/browser/styles.css"
   },
   "keywords": [],
   "devDependencies": {
