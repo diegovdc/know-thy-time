@@ -34,10 +34,12 @@
              categories)
         total (-> (reduce #(merge-with + %1 %2) {:total-time 0
                                                  :sched-time 0
-                                                 :left 0}
+                                                 :left 0
+                                                 :left-% 0}
                           cats-data)
                   (assoc :cat [:b "Total"] :cat-color {"r" 255 "g" 255 "b" 255 "a" 1})
-                  (#(assoc % :left-% (* 100 (/ (:left % 0) (:total-time % 1))))))
+                  (#(assoc % :left-% (if (zero? (:total-time %)) 0
+                                         (* 100 (/ (:left % 0) (:total-time %)))))))
         unit (fn [unit*] [:div {:class "text-center"} [:small unit*]])
         th (fn [text unit*] [:th [:div {:class "text-center"} text
                                  (when unit* (unit unit*))]])]
