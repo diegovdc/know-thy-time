@@ -2,7 +2,9 @@
   (:require [browser.routes :as routes]
             [re-frame.core :as re-frame]
             [reagent.dom :as dom]
+            [browser.date-utils :as dutils]
             [reitit.coercion.spec :as rss]
+            [browser.alert :as alert]
             [reitit.core :as r]
             [reitit.frontend :as rf]
             [reitit.frontend.controllers :as rfc]
@@ -71,27 +73,43 @@
     router))
 
 
-
 (defn nav [{:keys [router current-route]}]
-  [:ul
-   (for [route-name (r/route-names router)
-         :let       [route (r/match-by-name router route-name)
-                     text (-> route :data :link-text)]]
-     [:li {:key route-name}
-      (when (= route-name (-> current-route :data :name))
-        "> ")
-      ;; Create a normal links that user can click
-      [:a {:href (href route-name)} text]])])
+  (let [year @(re-frame/subscribe [:year])
+        month @(re-frame/subscribe [:month])
+        routes
+        (map (fn [{:keys [route-name text params]}]
+               (let [route (r/match-by-name router route-name params)
+                     text (or text (-> route :data :link-text))]
+                 [:li {:key text}
+                  (when (and (= route-name (-> current-route :data :name))
+                             (not= route-name ::routes/calendar))
+
+                    "> ")
+                  ;; Create a normal links that user can click
+                  [:a {:href (href route-name params)} text]]))
+             [{:route-name ::routes/calendar
+               :text "Previous month"
+               :params (dutils/prev-month year month)}
+              {:route-name ::routes/home}
+              {:route-name ::routes/calendar
+               :text "Next month"
+               :params (dutils/next-month year month)}
+              {:route-name ::routes/categories}
+              {:route-name ::routes/fixed-time}])
+        ]
+    [:ul {:class "d-flex justify-content-around"} routes]))
 
 (defn router-component [{:keys [router]}]
   (let [current-route @(re-frame/subscribe [::current-route])]
     [:div
+     (alert/main)
      [nav {:router router :current-route current-route}]
      (when current-route
        [(-> current-route :data :view)])]))
 
 (defn start-app! []
   (let [router (init-routes! routes/routes)] ;; Reset routes on figwheel reload
+    (re-frame/dispatch [:router router])
     (dom/render [router-component {:router router}]
                 (.getElementById js/document "app"))))
 

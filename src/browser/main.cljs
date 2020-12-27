@@ -2,14 +2,12 @@
   (:require [browser.budget :as budget]
             [browser.month :as month]
             [browser.router :as router]
-            [browser.routes :as routes]
-            [cljs.reader :as reader]
+            [browser.db :as db]
+            [browser.db.init :as db-init]
+            [clojure.spec.alpha :as s]
             [clojure.string :as str]
             [re-frame.core :as rf]
-            [reagent.dom :as dom]))
-
-(defn get-activities []
-  (reader/read-string (js/localStorage.getItem "activities")))
+            [clojure.walk :as walk]))
 
 
 ;; A detailed walk-through of this source code is provided in the docs:
@@ -38,23 +36,17 @@
                       :activities {"Inversiones" {:hrs 8}}}}
    "Libre" {:default {:percentage 10}}})
 
+
 ;; -- Domino 2 - Event Handlers -----------------------------------------------
 
 (rf/reg-event-db ;; sets up initial application state
  :initialize     ;; usage:  (dispatch [:initialize])
  (fn [_ _] ;; the two parameters are not important here, so use _
-   {:current-route nil
-    :activities (get-activities)
-    :categories categories
-    :year 2021
-    :month 0
-    :time (js/Date.) ;; What it returns becomes the new application state
-    :time-color "#abc"}))    ;; so the application state will initially be a map with two keys
+   db/initial-db))    ;; so the application state will initially be a map with two keys
 
-
-(rf/reg-event-db                ;; usage:  (dispatch [:time-color-change 34562])
- :time-color-change            ;; dispatched when the user enters a new colour into the UI text field
- (fn [db [_ new-color-value]]  ;; -db event handlers given 2 parameters:  current application state and event (a vector)
+(rf/reg-event-db ;; usage:  (dispatch [:time-color-change 34562])
+ :time-color-change ;; dispatched when the user enters a new colour into the UI text field
+ (fn [db [_ new-color-value]] ;; -db event handlers given 2 parameters:  current application state and event (a vector)
    (assoc db :time-color new-color-value)))   ;; compute and return the new application state
 
 
@@ -62,6 +54,67 @@
  :timer                         ;; every second an event of this kind will be dispatched
  (fn [db [_ new-time]]          ;; note how the 2nd parameter is destructured to obtain the data value
    (assoc db :time new-time)))
+
+(rf/reg-event-db
+ :router
+ (fn [db [_ router]]
+   (assoc db :router router)))
+
+(rf/reg-event-db :set-year (fn [db [_ year]] (assoc db :year year)))
+(rf/reg-event-db :set-month (fn [db [_ year]] (assoc db :month year)))
+
+(rf/reg-event-fx
+ :create-category
+ (fn [{:keys [db]} [_ category-name]]
+
+   {:db (if (empty? category-name)
+          (assoc db :alert {:variant "danger" :msg "The category must have a name"})
+          (assoc-in db [:categories category-name :default]
+                    {:percentage 0
+                     :color {"r" (rand-int 255)
+                             "g" (rand-int 255)
+                             "b" (rand-int 255)
+                             "a" 1}
+                     :activities {}}))
+    :fx (if (empty? category-name) []
+            [[:save-categories]])}))
+
+(rf/reg-event-fx
+ :update-category
+ (fn [{:keys [db]} [_ values-path value]]
+   {:db (assoc-in db (concat [:categories] values-path) value)
+    :fx [[:save-categories]]}))
+
+(defn remove-activities-of-category [activities category-name]
+  (walk/postwalk
+   (fn [x]
+     (if (and (s/valid? ::db/day-map x))
+       (->> x
+            (map (fn [[id day]] (if (= category-name (:cat day)) nil [id day])))
+            (remove nil?)
+            (into {}))
+       x))
+   activities))
+
+(rf/reg-event-fx
+ :delete-category
+ (fn [{:keys [db]} [_ category-name]]
+   {:db (-> db (update :categories dissoc category-name)
+            (update :activities remove-activities-of-category category-name))
+    :fx [[:save-categories]
+         [:save-activities]]}))
+
+(rf/reg-event-fx
+ :create-category-activity
+ (fn [{:keys [db]} [_ values-path value]]
+   {:db (assoc-in db (concat [:categories] values-path) value)
+    :fx [[:save-categories]]}))
+
+(rf/reg-event-fx
+ :delete-category-activity
+ (fn [{:keys [db]} [_ values-path activity-name]]
+   {:db (update-in db (concat [:categories] values-path) dissoc activity-name)
+    :fx [[:save-categories]]}))
 
 (rf/reg-event-fx
  :create-activity
@@ -75,10 +128,44 @@
    {:db (update-in db [:activities year month day] dissoc id)
     :fx [[:save-activities]]}))
 
+(rf/reg-event-fx
+ :create-fixed-time
+ (fn [{:keys [db]} [_ fixed-cat]]
+   {:db (assoc-in db [:fixed-time fixed-cat] 0)
+    :fx [[:save-fixed-time]]}))
+
+(rf/reg-event-fx
+ :update-fixed-time
+ (fn [{:keys [db]} [_ fixed-cat value]]
+   {:db (assoc-in db [:fixed-time fixed-cat] value)
+    :fx [[:save-fixed-time]]}))
+
+(rf/reg-event-fx
+ :delete-fixed-time
+ (fn [{:keys [db]} [_ fixed-cat]]
+   {:db (update db :fixed-time dissoc fixed-cat)
+    :fx [[:save-fixed-time]]}))
+
+(rf/reg-event-fx
+ :close-alert
+ (fn [{:keys [db]} [_]]
+   {:db (assoc db :alert db-init/initial-alert)}))
+
+(rf/reg-fx
+ :save-categories
+ (fn []
+   (js/localStorage.setItem "categories" (pr-str @(rf/subscribe [:categories])))))
+
 (rf/reg-fx
  :save-activities
  (fn []
    (js/localStorage.setItem "activities" (pr-str @(rf/subscribe [:activities])))))
+
+(rf/reg-fx
+ :save-fixed-time
+ (fn []
+   (js/localStorage.setItem "fixed-time" (pr-str @(rf/subscribe [:fixed-time])))))
+
 
 ;; -- Domino 4 - Query  -------------------------------------------------------
 
@@ -88,7 +175,14 @@
  (fn [db _] ;; db is current app state. 2nd unused param is query vector
    (:time db)))
 
+(rf/reg-sub :alert (fn [db _] (:alert db)))
+(rf/reg-sub :fixed-time (fn [db _] (:fixed-time db)))
 (rf/reg-sub :categories (fn [db _] (:categories db)))
+(rf/reg-sub :categories-colors
+            (fn [db _] (->> (:categories db)
+                           (map (fn [[cat data]]
+                                  [cat (->> data :default :color)]))
+                           (into {}))))
 (rf/reg-sub :activities (fn [db _] (:activities db)))
 (rf/reg-sub :month (fn [db _] (:month db)))
 (rf/reg-sub :year (fn [db _] (:year db)))
@@ -129,17 +223,6 @@
 
 ;; -- Entry Point -------------------------------------------------------------
 
-(defn render
-  []
-  (reagent.dom/render [ui]
-                      (js/document.getElementById "app")))
-
-#_(defn init
-  []
-  (rf/dispatch-sync [:initialize]) ;; put a value into application state
-  (render) ;; mount the application's ui into '<div id="app" />'
-  #_(router/init)
-  )
 
 (defn init []
   (rf/clear-subscription-cache!)
@@ -153,8 +236,12 @@
   ;; after shadow-cljs hot-reloads code. We force a UI update by clearing
   ;; the Reframe subscription cache.
   (rf/clear-subscription-cache!)
-  (init)
-  (render))
+  (init))
+
+(defn dev-re-init []
+  (rf/clear-subscription-cache!)
+  (rf/dispatch-sync [:initialize])
+  (init))
 
 (comment
   @(rf/subscribe [:activities])

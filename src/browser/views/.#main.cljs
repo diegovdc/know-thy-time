@@ -1,1 +1,0 @@
-diego@diego-ThinkPad-T590.342451:1608353163

@@ -1,6 +1,9 @@
 (ns browser.routes
   (:require [re-frame.core :as rf]
-            [browser.views.main :as views]))
+            [browser.views.main :as views]
+            [browser.views.categories :as categories]
+            [browser.views.fixed-time :as fixed-time]
+            [date-fns :as d]))
 
 
 
@@ -29,24 +32,39 @@
    [""
     {:name      ::home
      :view      views/main
-     :link-text "Home"
+     :link-text "Current month"
      :controllers
      [{ ;; Do whatever initialization needed for home page
        ;; I.e (re-frame/dispatch [::events/load-something-with-ajax])
-       :start (fn [& params](js/console.log "Entering home page"))
+       :start (fn [& params]
+                (let [today (js/Date.)]
+                  (rf/dispatch [:set-year (d/getYear today)])
+                  (rf/dispatch [:set-month (d/getMonth today)]))
+                (js/console.log "Entering home page"))
        ;; Teardown can be done here.
        :stop  (fn [& params] (js/console.log "Leaving home page"))}]}]
-   ["sub-page1"
-    {:name      ::sub-page1
-     :view      sub-page1
-     :link-text "Sub page 1"
+   ["categories"
+    {:name      ::categories
+     :view      categories/main
+     :link-text "Categories"
      :controllers
      [{:start (fn [& params] (js/console.log "Entering sub-page 1"))
        :stop  (fn [& params] (js/console.log "Leaving sub-page 1"))}]}]
-   ["sub-page2"
-    {:name      ::sub-page2
-     :view      sub-page2
-     :link-text "Sub-page 2"
+   ["fixed-time"
+    {:name      ::fixed-time
+     :view      fixed-time/main
+     :link-text "Fixed time"
      :controllers
-     [{:start (fn [& params] (js/console.log "Entering sub-page 2"))
-       :stop  (fn [& params] (js/console.log "Leaving sub-page 2"))}]}]])
+     [{:start (fn [& params] (js/console.log "Entering sub-page 1"))
+       :stop  (fn [& params] (js/console.log "Leaving sub-page 1"))}]}]
+   ["calendar/:year/:month"
+    {:name      ::calendar
+     :view      views/main
+     :link-text "Calendar"
+     :controllers
+     [{:parameters {:path [:year :month]}
+       :start (fn [& params]
+                (println (-> params first :path :year))
+                (rf/dispatch [:set-year (-> params first :path :year int)])
+                (rf/dispatch [:set-month (-> params first :path :month int)]))
+       :stop  (fn [& params] (js/console.log "Leaving sub-page 1"))}]}]])

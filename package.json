@@ -20,8 +20,12 @@
   },
   "license": "MIT",
   "dependencies": {
+    "bootstrap": "^4.5.3",
     "date-fns": "^2.16.1",
     "react": "16.13.0",
+    "react-bootstrap": "^1.4.0",
+    "react-bootstrap-icons": "^1.2.2",
+    "react-color": "^2.19.3",
     "react-dom": "16.13.0"
   }
 }
