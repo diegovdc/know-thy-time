@@ -51,20 +51,21 @@
                             (filter first)
                             (sort-by second))
         cat-colors @(rf/subscribe [:categories-colors])
-        total-time (apply + (map second activity-time))
+        total-activity-time  (apply + (map second activity-time))
+        total-free-time (- 24 total-activity-time)
         fixed-time @(rf/subscribe [:fixed-time])
-        available-time (-> (apply + (vals fixed-time)) (- total-time)) ]
+        available-time (->> (apply + (vals fixed-time)) (- total-free-time))]
     [:div
      [:p {:class (str "mb-1" (when (> 0 available-time) " text-danger "))}
       "Available time: " available-time]
-     (when (> total-time 0)
+     (when (> total-free-time 0)
        [:div {:class "mb-3 d-flex align-items-center"}
         (map (fn [[cat time]]
                [:span {:key cat :class "d-inline-block position-relative mr-2"}
                 [:span {:class "absolute-centered"} time]
                 (utils/render-dot (get cat-colors cat "#fff") (+ 20 (* 5 time)) )])
              activity-time)
-        [:span {:class "display-4"} "= " total-time ]])]))
+        [:span {:class "display-4"} "= " total-activity-time ]])]))
 
 (defn render-create-activity-form [year month day day-name]
   (let [categories-data @(rf/subscribe [:categories])
