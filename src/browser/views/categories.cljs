@@ -1,7 +1,8 @@
 (ns browser.views.categories
   (:require [re-frame.core :as rf]
             [browser.utils :as utils]
-            [goog.string :refer [format]]
+            [goog.string :as gstr]
+            [goog.string.format]
             [reagent.core :as r]
             ["react-color" :as color]))
 
@@ -69,7 +70,7 @@
                                               [:update-category
                                                [cat-name :default :color]
                                                (-> % js->clj (get "rgb") )]))}])
-     [:p (format "Total hours: %s, still free hours: %s "
+     [:p (gstr/format "Total hours: %s, still free hours: %s "
                  total-hours
                  (- total-hours projected-hours))]
      (render-activities cat-name (data :activities))
@@ -93,7 +94,7 @@
          (reset! new-category "")))]
      [:div {:class "mb-3"}
       [:div "Total allocated time: " (utils/categories-total-percentage categories) "%"]
-      [:div (format "Total available hours: %s/day, %s/month "
+      [:div (gstr/format "Total available hours: %s/day, %s/month "
                     available-hours
                     available-hours-month)]]
      (doall (map (partial render-category available-hours-month) categories))]))

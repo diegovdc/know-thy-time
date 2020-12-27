@@ -1,10 +1,9 @@
 (ns browser.month
   (:require ["date-fns" :as d]
-            ["react" :as react]
             ["react-bootstrap" :as rb]
-            ["react-bootstrap-icons" :as icons]
             [browser.utils :as utils :refer [get-category-value]]
             [goog.string :as gstr]
+            [goog.string.format]
             [re-frame.core :as rf]
             [reagent.core :as r]
             [clojure.spec.alpha :as s]

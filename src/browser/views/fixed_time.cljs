@@ -2,7 +2,8 @@
   (:require [reagent.core :as r]
             [browser.utils :as utils]
             [re-frame.core :as rf]
-            [goog.string :as gstr]))
+            [goog.string :as gstr]
+            [goog.string.format]))
 (def new-category (r/atom ""))
 
 (defn render-category [[fixed-cat time]]

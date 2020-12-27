@@ -1,5 +1,6 @@
 (ns browser.utils
   (:require [goog.string :as gstr]
+            [goog.string.format]
             ["react-bootstrap" :as rb]
             [clojure.string :as str]
             [react-bootstrap-icons :as icons]))

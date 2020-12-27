@@ -1,11 +1,7 @@
 (ns browser.budget
-  (:require [browser.utils :refer [get-category-value]]
-            [goog.string :refer [format]]
-            [re-frame.core :as rf]
+  (:require [re-frame.core :as rf]
             [browser.utils :as utils]
-            [react-bootstrap :as rb]
-            [clojure.string :as str]
-            [goog.string :as gstr]))
+            [react-bootstrap :as rb]))
 
 
 (defn budget-row
@@ -23,7 +19,7 @@
 (defn monthly-budget [categories spent-time-by-cat month-free-time [year month]]
   (let [cats-data
         (map (fn [[cat data]]
-               (let [cat-data (get-category-value [year month] data)
+               (let [cat-data (utils/get-category-value [year month] data)
                      cat-color (cat-data :color)
                      sched-time (spent-time-by-cat cat 0)
                      total-time (/ (* month-free-time (cat-data :percentage)) 100)
