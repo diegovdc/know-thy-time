@@ -1,4 +1,5 @@
-build/
+build/**/*.*
+!build/browser/bootstrap.min.css
 node_modules/
 target/
 .shadow-cljs/
