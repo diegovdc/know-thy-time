@@ -1,12 +1,12 @@
 (ns browser.utils
-  (:require [goog.string :refer [format]]
+  (:require [goog.string :as gstr]
             ["react-bootstrap" :as rb]
             [clojure.string :as str]
             [react-bootstrap-icons :as icons]))
 
 (defn get-category-value [[year month] category]
-    (or (get category [year month])
-        (get category :default)))
+  (or (get category [year month])
+      (get category :default)))
 
 (defn get-input-string [event]
   (-> event .-target .-value))
@@ -15,21 +15,21 @@
   (-> event .-target .-value js/Number))
 
 (defn categories-total-percentage
-    "Total percentage of time allocated to all categories.
+  "Total percentage of time allocated to all categories.
   Useful for knowing if there is still time to be distributed or not"
-    ([categories] (categories-total-percentage categories nil))
-    ([categories [year month]]
-     (->> categories vals
-          (map (fn [cat]
-                 (:percentage (get-category-value [year month] cat))))
-          (apply +))))
+  ([categories] (categories-total-percentage categories nil))
+  ([categories [year month]]
+   (->> categories vals
+        (map (fn [cat]
+               (:percentage (get-category-value [year month] cat))))
+        (apply +))))
 
 (defn get-color-string [color]
-  (format "rgba(%s, %s,  %s, %s)"
-          (get color "r")
-          (get color "g")
-          (get color "b")
-          (get color "a")))
+  (gstr/format "rgba(%s, %s,  %s, %s)"
+               (get color "r")
+               (get color "g")
+               (get color "b")
+               (get color "a")))
 
 (defn render-dot [rgba-color size]
   [:span {:style {:height size
