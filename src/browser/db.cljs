@@ -6,16 +6,16 @@
                                      initial-alert]]
             [re-frame.core :as rf]))
 
-(def initial-db {:current-route nil
-                 :router nil
-                 :activities (get-activities)
-                 :categories (get-categories)
-                 :alert initial-alert
-                 :fixed-time (get-fixed-time)
-                 :year nil
-                 :month nil
-                 :time (js/Date.) ;; What it returns becomes the new application state
-                 :time-color "#abc"})
+(defn initialize-db [] {:current-route nil
+                        :router nil
+                        :activities (get-activities)
+                        :categories (get-categories)
+                        :alert initial-alert
+                        :fixed-time (get-fixed-time)
+                        :year nil
+                        :month nil
+                        :time (js/Date.) ;; What it returns becomes the new application state
+                        :time-color "#abc"})
 
 (defn in-categories? [cat]
   ((set (keys @(rf/subscribe [:categories]))) cat))

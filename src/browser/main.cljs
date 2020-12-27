@@ -42,7 +42,7 @@
 (rf/reg-event-db ;; sets up initial application state
  :initialize     ;; usage:  (dispatch [:initialize])
  (fn [_ _] ;; the two parameters are not important here, so use _
-   db/initial-db))    ;; so the application state will initially be a map with two keys
+   (db/initialize-db)))    ;; so the application state will initially be a map with two keys
 
 (rf/reg-event-db ;; usage:  (dispatch [:time-color-change 34562])
  :time-color-change ;; dispatched when the user enters a new colour into the UI text field
@@ -227,7 +227,6 @@
 (defn init []
   (rf/clear-subscription-cache!)
   (rf/dispatch-sync [:initialize])
-  #_(dev-setup)
   (router/start-app!))
 
 (defn ^:dev/after-load clear-cache-and-render!
