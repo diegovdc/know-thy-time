@@ -14,7 +14,7 @@
                   :year year
                   :month month
                   :day day
-                  :name  (d/format (js/Date. year month day) "d")})
+                  :name  (d/format (js/Date. year month day) "iii d")})
         (range 1 (inc (d/getDaysInMonth (js/Date. year month ))))))
 
 (defonce create-activity (r/atom nil))
@@ -65,7 +65,7 @@
                 [:span {:class "absolute-centered"} time]
                 (utils/render-dot (get cat-colors cat "#fff") (+ 20 (* 5 time)) )])
              activity-time)
-        [:span {:class "display-4"} "= " total-activity-time ]])]))
+        (when (> total-activity-time 0) [:span {:class "display-4"} "= " total-activity-time ])])]))
 
 (defn render-create-activity-form [year month day day-name]
   (let [categories-data @(rf/subscribe [:categories])
@@ -134,27 +134,37 @@
         :disabled (not (s/valid? ::db/day-activity created-activity)))])))
 
 (defn main []
-  (let [activities @(rf/subscribe [:activities])
-        year @(rf/subscribe [:year])
-        month @(rf/subscribe [:month])
-        dates (days month year)]
-    (when (and year month)
-      [:div
-       [:h1 (d/format (js/Date. year month ) "MMM Y")]
-       [:div
-        (doall
-         (map (fn [{:keys [name day]}]
-                (let [create? (= @create-activity name)
-                      activities (vals (get-in activities [year month day]))]
-                  [:div {:key name}
-                   [:h2 name
-                    [:span {:class "ml-2"}
-                     [:> rb/Button
-                      {:variant "outline-light"
-                       :on-click (fn [] (swap! create-activity #(if (= % name) nil name)))}
-                      (if create? "-" "New activity")]]]
-                   (render-create-activity-form year month day name)
-                   [:div
-                    (daily-activity-data activities)
-                    (render-activities activities)]]))
-              dates))]])))
+  (r/create-class
+   {:component-did-mount
+    (fn [this]
+      (js/setTimeout
+       #(let [day-elem (js/document.getElementById (str "day-" (d/getDate (js/Date.))))]
+          (.scrollIntoView day-elem))
+       100)
+      (println "component did mount" (d/getDate (js/Date.))))
+    :reagent-render
+    (fn []
+      (let [activities @(rf/subscribe [:activities])
+            year @(rf/subscribe [:year])
+            month @(rf/subscribe [:month])
+            dates (days month year)]
+        (when (and year month)
+          [:div
+           [:h1 (d/format (js/Date. year month ) "MMM Y")]
+           [:div
+            (doall
+             (map (fn [{:keys [name day]}]
+                    (let [create? (= @create-activity name)
+                          activities (vals (get-in activities [year month day]))]
+                      [:div {:key name}
+                       [:h2 {:id (str "day-" day)} name
+                        [:span {:class "ml-2"}
+                         [:> rb/Button
+                          {:variant "outline-light"
+                           :on-click (fn [] (swap! create-activity #(if (= % name) nil name)))}
+                          (if create? "-" "New activity")]]]
+                       (render-create-activity-form year month day name)
+                       [:div
+                        (daily-activity-data activities)
+                        (render-activities activities)]]))
+                  dates))]])))}))
