@@ -1,6 +1,6 @@
 {
   "name": "time-budget",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "ClojureScript project setup with Shadow-CLJS",
   "scripts": {
     "release": "run-s release:*",
