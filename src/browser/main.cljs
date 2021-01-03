@@ -222,18 +222,24 @@
    (month/main)])
 
 ;; -- Entry Point -------------------------------------------------------------
-
+(defn focus-current-month []
+  (fn [ev]
+    (when (and (.-altKey ev) (= 77 (.-keyCode ev)))
+      (.focus
+       (js/document.getElementById "Current month")))))
 
 (defn init []
   (rf/clear-subscription-cache!)
   (rf/dispatch-sync [:initialize])
-  (router/start-app!))
+  (router/start-app!)
+  (js/window.addEventListener "keyup" focus-current-month))
 
 (defn ^:dev/after-load clear-cache-and-render!
   []
   ;; The `:dev/after-load` metadata causes this function to be called
   ;; after shadow-cljs hot-reloads code. We force a UI update by clearing
   ;; the Reframe subscription cache.
+  (js/window.removeEventListener "keyup" focus-current-month)
   (rf/clear-subscription-cache!)
   (init))
 

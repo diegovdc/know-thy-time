@@ -80,7 +80,8 @@
         (map (fn [{:keys [route-name text params]}]
                (let [route (r/match-by-name router route-name params)
                      text (or text (-> route :data :link-text))]
-                 [:li {:key text}
+                 [:li {:key text :id text
+                       :tabIndex "-1"}
                   (when (and (= route-name (-> current-route :data :name))
                              (not= route-name ::routes/calendar))
 
@@ -91,11 +92,11 @@
                :text "Previous month"
                :params (dutils/prev-month year month)}
               {:route-name ::routes/home}
+              {:route-name ::routes/categories}
+              {:route-name ::routes/fixed-time}
               {:route-name ::routes/calendar
                :text "Next month"
-               :params (dutils/next-month year month)}
-              {:route-name ::routes/categories}
-              {:route-name ::routes/fixed-time}])
+               :params (dutils/next-month year month)}])
         ]
     [:ul {:class "d-flex justify-content-around"} routes]))
 

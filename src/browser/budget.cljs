@@ -11,9 +11,9 @@
                 :class "d-flex align-items-center"} [:span {:class "mr-2"}
                 (utils/render-dot cat-color 20)]
          cat]]
-   [:td total-time]
-   [:td sched-time]
-   [:td left]
+   [:td (utils/format-float total-time)]
+   [:td (utils/format-float sched-time)]
+   [:td (utils/format-float left)]
    [:td (utils/percentage-string left-%)]])
 
 (defn monthly-budget [categories spent-time-by-cat month-free-time [year month]]

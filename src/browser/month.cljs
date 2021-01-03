@@ -63,7 +63,7 @@
         (map (fn [[cat time]]
                [:span {:key cat :class "d-inline-block position-relative mr-2"}
                 [:span {:class "absolute-centered"} time]
-                (utils/render-dot (get cat-colors cat "#fff") (+ 20 (* 5 time)) )])
+                (utils/render-dot (get cat-colors cat "#fff") (+ 30 (* 4 time)) )])
              activity-time)
         (when (> total-activity-time 0) [:span {:class "display-4"} "= " total-activity-time ])])]))
 

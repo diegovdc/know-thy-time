@@ -47,8 +47,11 @@
    [:div {:class "arrow"}
     [:div {:class "tooltip-inner"} children]]])
 
+(defn format-float [number]
+  (str/replace (.toFixed number 2) ".00" ""))
+
 (defn percentage-string [number]
-  (str (str/replace (.toFixed number 2) ".00" "") "%"))
+  (str (format-float number) "%"))
 
 (defn input [label value on-change & {:keys [placeholder type step]}]
   [:> rb/Form.Group {:control-id label}

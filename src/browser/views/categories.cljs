@@ -8,19 +8,23 @@
 
 (defn cat-input
   ([data data-key val-name val-path]
-   (cat-input data data-key val-name val-path utils/get-input-string))
-  ([data data-key val-name val-path get-input-val-fn]
-   (utils/input val-name (data-key data) #(rf/dispatch
-                                           [:update-category
-                                            val-path
-                                            (get-input-val-fn %)]))))
+   (cat-input data data-key val-name val-path utils/get-input-string "text"))
+  ([data data-key val-name val-path get-input-val-fn type]
+   (utils/input val-name
+                (data-key data)
+                #(rf/dispatch
+                  [:update-category
+                   val-path
+                   (get-input-val-fn %)])
+                :type type)))
 
 (defn render-activity [category-name [activity-name data]]
   [:div {:key (str category-name activity-name)
          :class "categories__activity mb-2 d-flex"}
    (cat-input data :hrs activity-name
               [category-name :default :activities activity-name :hrs]
-              utils/get-input-number)
+              utils/get-input-number
+              "number")
    [:span {:class "align-self-center"} "hrs/month"]
    (utils/delete-btn #(rf/dispatch [:delete-category-activity
                                     [category-name :default :activities] activity-name]))])
@@ -57,7 +61,8 @@
       (cat-input data
                  :percentage (str cat-name ": ")
                  [cat-name :default :percentage]
-                 utils/get-input-number)
+                 utils/get-input-number
+                 "number")
       [:span {:class "categories__percentage"} "%"]
       [:span {:on-click #(toggle-color-picker cat-name)}
        (utils/render-dot color 20)]
@@ -71,8 +76,8 @@
                                                [cat-name :default :color]
                                                (-> % js->clj (get "rgb") )]))}])
      [:p (gstr/format "Total hours: %s, still free hours: %s "
-                 total-hours
-                 (- total-hours projected-hours))]
+                      (utils/format-float total-hours)
+                      (utils/format-float (- total-hours projected-hours)))]
      (render-activities cat-name (data :activities))
 
      ]))
@@ -95,6 +100,6 @@
      [:div {:class "mb-3"}
       [:div "Total allocated time: " (utils/categories-total-percentage categories) "%"]
       [:div (gstr/format "Total available hours: %s/day, %s/month "
-                    available-hours
-                    available-hours-month)]]
+                         (utils/format-float available-hours)
+                         (utils/format-float available-hours-month))]]
      (doall (map (partial render-category available-hours-month) categories))]))
