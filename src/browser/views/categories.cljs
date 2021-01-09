@@ -119,8 +119,10 @@
                                          cat-data)}]}))
 
 (defn right-column [categories]
-  (graphs/pie "" (categories-data categories)
-              :options {:legend {:labels {:fontColor "white" :fontSize 20}}}))
+  [:div {:class "w-100"}
+   [:div {:style {:position "sticky" :top 0}}
+    (graphs/pie "" (categories-data categories)
+                :options {:legend {:labels {:fontColor "white" :fontSize 20}}})]])
 
 (defn main []
   (let [categories @(rf/subscribe [:categories])]
