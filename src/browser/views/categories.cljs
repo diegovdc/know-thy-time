@@ -1,6 +1,7 @@
 (ns browser.views.categories
   (:require [re-frame.core :as rf]
             [browser.utils :as utils]
+            [browser.graphs :as graphs]
             [goog.string :as gstr]
             [goog.string.format]
             [reagent.core :as r]
@@ -84,12 +85,11 @@
 
 (def new-category (r/atom ""))
 
-(defn main []
-  (let [categories @(rf/subscribe [:categories])
-        fixed-time @(rf/subscribe [:fixed-time])
+(defn left-column [categories]
+  (let [fixed-time @(rf/subscribe [:fixed-time])
         available-hours (- 24 (apply + (vals fixed-time)))
         available-hours-month (* 30 available-hours)]
-    [:div [:h1 "Categories"]
+    [:div
      [:div {:class "mb-3 mw-300"}
       (utils/input-with-btn
        "New category" "Create" @new-category
@@ -103,3 +103,28 @@
                          (utils/format-float available-hours)
                          (utils/format-float available-hours-month))]]
      (doall (map (partial render-category available-hours-month) categories))]))
+
+(comment)
+
+(defn categories-data [categories]
+  (let [cat-data (->>  categories
+                       (map (fn [[cat val]] [cat (-> val :default)]))
+                       (sort-by (comp  :percentage second)))]
+    {:labels (map first cat-data)
+     :datasets [{:label "Allocated Time"
+                  :data (map (comp :percentage second) cat-data)
+                  :backgroundColor (map (comp utils/get-color-string
+                                               :color
+                                               second)
+                                         cat-data)}]}))
+
+(defn right-column [categories]
+  (graphs/pie "" (categories-data categories)
+              :options {:legend {:labels {:fontColor "white" :fontSize 20}}}))
+
+(defn main []
+  (let [categories @(rf/subscribe [:categories])]
+    [:div [:h1 "Categories"]
+     [:div {:class "d-flex"}
+      (left-column categories)
+      (right-column categories)]]))
