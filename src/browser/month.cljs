@@ -20,27 +20,35 @@
 (defonce create-activity (r/atom nil))
 (defonce new-activity (r/atom {}))
 
-(defn render-activities [activities]
-  (doall
-   (map
-    (fn [{:keys [cat act time description id] :as activity}]
-      (let [category (-> @(rf/subscribe [:categories]) (get cat) :default)]
-        (when category
-          [:div {:key id}
-           [:div {:class "d-flex"}
-            [:span {:style {:position "relative" :top 3}}
-             (utils/render-dot (:color category) 16)]
+(defonce show-activities (r/atom {}))
+(defn render-activities [day-name activities]
+  [:div {:class "d-flex month__activity"}
+   (if-not (-> @show-activities (get day-name))
+     [:button {:class "btn month__activity_toggle_show"
+               :on-click #(swap! show-activities assoc day-name true)}
+      [:u (gstr/format "Show activities (%s)" (count activities))]]
+     [:div
+      (doall
+       (map
+        (fn [{:keys [cat act time description id] :as activity}]
+          (let [category (-> @(rf/subscribe [:categories]) (get cat) :default)]
+            (when category
+              [:div {:key id}
+               [:span {:style {:position "relative" :top 3}}
+                (utils/render-dot (:color category) 16)]
 
-            [:div {:class "ml-2"}
-             [:p {:class "mb-0"}
-              (gstr/format "%s %shr%s" act time (if (= time 1) "" "s"))
+               [:div {:class "ml-2"}
+                [:p {:class "mb-0"}
+                 (gstr/format "%s %shr%s" act time (if (= time 1) "" "s"))
 
-              [:span {:class "ml-2"}
-               (utils/delete-btn #(rf/dispatch [:delete-activity activity]))]]
+                 [:span {:class "ml-2 month__activity_delete"}
+                  (utils/delete-btn #(rf/dispatch [:delete-activity activity]))]]
 
-             [:p {:style {:max-width 200}}
-              [:small cat (when description (str ": " description))]]]]])))
-    activities)))
+                [:p {:style {:max-width 200}}
+                 [:small cat (when description (str ": " description))]]]])))
+        activities))
+      [:button {:class "btn" :on-click #(swap! show-activities dissoc day-name)}
+       [:u "Hide activities"]]])])
 
 (defn daily-activity-data [activities]
   (let [activity-time (->>  activities
@@ -138,8 +146,10 @@
    {:component-did-mount
     (fn [this]
       (js/setTimeout
-       #(let [day-elem (js/document.getElementById (str "day-" (d/getDate (js/Date.))))]
-          (.scrollIntoView day-elem))
+       #(let [day (d/getDate (js/Date.))
+              day-elem (js/document.getElementById (str "day-" day))]
+          (.scrollIntoView day-elem)
+          (swap! show-activities assoc day true))
        100)
       (println "component did mount" (d/getDate (js/Date.))))
     :reagent-render
@@ -166,5 +176,5 @@
                        (render-create-activity-form year month day name)
                        [:div
                         (daily-activity-data activities)
-                        (render-activities activities)]]))
+                        (render-activities day activities)]]))
                   dates))]])))}))

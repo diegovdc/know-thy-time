@@ -109,3 +109,19 @@ body {
     }
   }
 }
+
+.month {
+  &__activity {
+    &_delete,
+    &_toggle_show {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    &:hover {
+      .month__activity_delete,
+      .month__activity_toggle_show {
+        opacity: 1;
+      }
+    }
+  }
+}
