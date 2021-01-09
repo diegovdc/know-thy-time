@@ -177,6 +177,11 @@
 
 (rf/reg-sub :alert (fn [db _] (:alert db)))
 (rf/reg-sub :fixed-time (fn [db _] (:fixed-time db)))
+(rf/reg-sub :free-time (fn [db _] (let [fixed-time (:fixed-time db)
+                                       free-time (- 24 (apply + (vals fixed-time)))
+                                       month-free-time (* 30 free-time)]
+                                   {:free-time free-time
+                                    :month-free-time month-free-time})))
 (rf/reg-sub :categories (fn [db _] (:categories db)))
 (rf/reg-sub :categories-colors
             (fn [db _] (->> (:categories db)

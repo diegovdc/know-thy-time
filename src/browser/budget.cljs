@@ -1,8 +1,8 @@
 (ns browser.budget
-  (:require [re-frame.core :as rf]
+  (:require [browser.graphs :as graphs]
             [browser.utils :as utils]
+            [re-frame.core :as rf]
             [react-bootstrap :as rb]))
-
 
 (defn budget-row
   [{:keys [cat cat-color sched-time total-time left left-%]}]
@@ -86,8 +86,7 @@
 
 (defn main []
   (let [fixed-time @(rf/subscribe [:fixed-time])
-        free-time (- 24 (apply + (vals fixed-time)))
-        month-free-time (* 30 free-time)
+        {:keys [free-time month-free-time]} @(rf/subscribe [:free-time])
         cats @(rf/subscribe [:categories])
         acts @(rf/subscribe [:activities])
         year  @(rf/subscribe [:year])
@@ -102,7 +101,9 @@
                                         acts-by-cat))
         scheduled-time (->> spent-time-by-cat vals (apply +))]
     [:div
-     (accordion 1 [["Fixed and free time"
+     (accordion 2 [["Fixed and free time"
                     (fixed-and-free-time cat fixed-time free-time month-free-time)]
                    ["Monthly Budget"
-                    (monthly-budget cats spent-time-by-cat month-free-time [year month])]])]))
+                    (monthly-budget cats spent-time-by-cat month-free-time [year month])]
+                   ["Charts"
+                    (graphs/bars "Advanced %" (graphs/get-activities-data))]])]))
