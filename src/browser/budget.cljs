@@ -98,12 +98,15 @@
                          (group-by :cat))
         spent-time-by-cat (into {} (map (fn [[cat acts]]
                                           [cat (apply + (map :time acts))])
-                                        acts-by-cat))
-        scheduled-time (->> spent-time-by-cat vals (apply +))]
+                                        acts-by-cat))]
     [:div
-     (accordion 2 [["Fixed and free time"
-                    (fixed-and-free-time cat fixed-time free-time month-free-time)]
-                   ["Monthly Budget"
-                    (monthly-budget cats spent-time-by-cat month-free-time [year month])]
-                   ["Charts"
-                    (graphs/bars "Advanced %" (graphs/get-activities-data))]])]))
+     (accordion
+      2
+      [["Fixed and free time"
+        (fixed-and-free-time cat fixed-time free-time month-free-time)]
+       ["Monthly Budget"
+        (monthly-budget cats spent-time-by-cat month-free-time [year month])]
+       ["Charts"
+        [:div
+         (graphs/bars "" @(rf/subscribe [:monthly-categories-graph-data]))
+         (graphs/bars "" @(rf/subscribe [:monthly-activities-graph-data]))]]])]))

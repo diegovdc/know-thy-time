@@ -7,7 +7,9 @@
             [clojure.spec.alpha :as s]
             [clojure.string :as str]
             [re-frame.core :as rf]
-            [clojure.walk :as walk]))
+            [clojure.walk :as walk]
+            [browser.utils :as utils]
+            [clojure.set :as set]))
 
 
 ;; A detailed walk-through of this source code is provided in the docs:
@@ -183,19 +185,136 @@
                                    {:free-time free-time
                                     :month-free-time month-free-time})))
 (rf/reg-sub :categories (fn [db _] (:categories db)))
+(rf/reg-sub :activities (fn [db _] (:activities db)))
+(rf/reg-sub :month (fn [db _] (:month db)))
+(rf/reg-sub :year (fn [db _] (:year db)))
 (rf/reg-sub :categories-colors
             (fn [db _] (->> (:categories db)
                            (map (fn [[cat data]]
                                   [cat (->> data :default :color)]))
                            (into {}))))
-(rf/reg-sub :activities (fn [db _] (:activities db)))
-(rf/reg-sub :month (fn [db _] (:month db)))
-(rf/reg-sub :year (fn [db _] (:year db)))
 
 (rf/reg-sub
- :time-color
- (fn [db _]
-   (:time-color db)))
+ :monthly-categories-graph-data
+ :<- [:categories]
+ :<- [:activities]
+ :<- [:year]
+ :<- [:month]
+ :<- [:free-time]
+ (fn [[categories activities year month {:keys [month-free-time]}] _]
+   (let [cats (->> categories
+                   (map (fn [[cat val]] [cat (:default val)]))
+                   (into {}))
+         acts (-> activities
+                  (get-in [year month])
+                  vals
+                  (->> (mapcat vals)
+                       (group-by :cat)))
+         cat-data (->> cats
+                       (map (fn [[cat data]]
+                              (let [cat-hours (-> data :percentage
+                                                  (/ 100) (* month-free-time))
+                                    total-hours (apply + (map :time (get acts cat)))]
+                                {:name cat
+                                 :advance (* 100 (/ total-hours cat-hours))
+                                 :total-hours total-hours})))
+                       (sort-by :total-hours)
+                       reverse)
+         data (map (comp #(.toFixed % 2) :advance) cat-data)
+         cat-names (map :name cat-data)
+         background-colors (map #(-> cats (get %)
+                                     :color
+                                     (assoc "a" 0.3)
+                                     utils/get-color-string)
+                                cat-names)
+         border-colors (map #(-> cats (get %)
+                                 :color
+                                 utils/get-color-string)
+                            cat-names)]
+     {:labels cat-names
+      :datasets [{:label "Advanced %"
+                  :data data
+                  :backgroundColor background-colors
+                  :borderColor border-colors
+                  :borderWidth 1}]})))
+
+(rf/reg-sub :activities-of-month
+            :<- [:activities]
+            :<- [:year]
+            :<- [:month]
+            (fn [[activities year month] _]
+              (-> activities (get-in [year month]) vals)))
+
+(rf/reg-sub :month-categories
+            :<- [:categories]
+            (fn [categories _]
+              (->> categories (map (fn [[cat val]] [cat (:default val)])) (into {}))))
+(rf/reg-sub
+ :time-by-activities-of-month-by-cat
+ :<- [:activities-of-month]
+ :<- [:month-categories]
+ (fn [[activities-of-month month-categories] _]
+   (let [activity-exercised-%
+         (fn [cat [act act-data]]
+           (let [act-budget (get-in month-categories [cat :activities act :hrs])
+                 act-used-time (->> act-data (map :time) (apply +))]
+             [act (* 100 (/ act-used-time act-budget))]))
+
+         add-missing-activities
+         (fn [cat exercised-acts]
+           (->> (set (map first exercised-acts))
+                (set/difference (-> month-categories
+                                    (get cat)
+                                    :activities keys
+                                    set))
+                (map (fn [act] [act 0]))
+                (into exercised-acts)))]
+
+     (->> activities-of-month
+          (mapcat vals)
+          (group-by :cat)
+          (map (fn [[cat acts]]
+                 [cat (->> acts
+                           (group-by :act)
+                           (map (partial activity-exercised-% cat))
+                           (add-missing-activities cat)
+                           (sort-by second)
+                           reverse)]))
+          (sort-by (comp (partial apply +) (partial map second) second))
+          reverse))))
+
+
+
+(rf/reg-sub
+ :monthly-activities-graph-data
+ :<- [:categories]
+ :<- [:time-by-activities-of-month-by-cat]
+ (fn [[categories acts-time-by-cat] _]
+   (let [cats (->> categories (map (fn [[cat val]] [cat (:default val)])) (into {}))
+         labels (->> acts-time-by-cat (mapcat second) (map first))
+         data (->> acts-time-by-cat (mapcat second) (map (comp #(.toFixed % 2) second)))
+
+         colors-with-repeats
+         (->> acts-time-by-cat
+              (map (juxt (comp count second)
+                         (comp :color (partial get cats) first))))
+
+         background-colors
+         (mapcat (fn [[n color]]
+                   (repeat n (utils/get-color-string
+                              (assoc color "a" 0.3))))
+                 colors-with-repeats)
+
+         border-colors (mapcat (fn [[n color]]
+                                 (repeat n (utils/get-color-string color)))
+                               colors-with-repeats)]
+
+     {:labels labels
+      :datasets [{:label "Exercised activities %"
+                  :data data
+                  :backgroundColor background-colors
+                  :borderColor border-colors
+                  :borderWidth 1}]})))
 
 
 ;; -- Domino 5 - View Functions ----------------------------------------------
