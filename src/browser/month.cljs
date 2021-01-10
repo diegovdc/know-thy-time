@@ -80,7 +80,7 @@
                                   :font-size 18}}
                    [:b time]]
                   (utils/render-dot color
-                                    (+ 35 (* 3 time))
+                                    (+ 42 (* 3  time))
                                     :style style)]))
              activity-time)
         (when (> total-activity-time 0)
