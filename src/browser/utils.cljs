@@ -32,12 +32,13 @@
                (get color "b")
                (get color "a")))
 
-(defn render-dot [rgba-color size]
-  [:span {:style {:height size
-                  :width size
-                  :display "inline-block"
-                  :border-radius "100%"
-                  :background-color (get-color-string rgba-color)}}])
+(defn render-dot [rgba-color size & {:keys [style]}]
+  [:span {:style (merge {:height size
+                         :width size
+                         :display "inline-block"
+                         :border-radius "100%"
+                         :background-color (get-color-string rgba-color)}
+                        style)}])
 
 (defn tooltip [children style]
   [:div {:style style

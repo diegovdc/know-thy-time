@@ -34,11 +34,11 @@
           (let [category (-> @(rf/subscribe [:categories]) (get cat) :default)]
             (when category
               [:div {:key id}
-               [:span {:style {:position "relative" :top 3}}
-                (utils/render-dot (:color category) 16)]
-
                [:div {:class "ml-2"}
+
                 [:p {:class "mb-0"}
+                 [:span {:class "mr-1"}
+                  (utils/render-dot (:color category) 16)]
                  (gstr/format "%s %shr%s" act time (if (= time 1) "" "s"))
 
                  [:span {:class "ml-2 month__activity_delete"}
@@ -69,11 +69,22 @@
      (when (> total-free-time 0)
        [:div {:class "mb-3 d-flex align-items-center"}
         (map (fn [[cat time]]
-               [:span {:key cat :class "d-inline-block position-relative mr-2"}
-                [:span {:class "absolute-centered"} time]
-                (utils/render-dot (get cat-colors cat "#fff") (+ 30 (* 4 time)) )])
+               (let [color (get cat-colors cat "#fff")
+                     color-str (utils/get-color-string color)
+                     style {:background-color (utils/get-color-string
+                                               (assoc color "a" 0.3))
+                            :border (str "3px solid " color-str)}]
+                 [:span {:key cat :class "d-inline-block position-relative mr-2"}
+                  [:span {:class "absolute-centered"
+                          :style {:color color-str
+                                  :font-size 18}}
+                   [:b time]]
+                  (utils/render-dot color
+                                    (+ 35 (* 3 time))
+                                    :style style)]))
              activity-time)
-        (when (> total-activity-time 0) [:span {:class "display-4"} "= " total-activity-time ])])]))
+        (when (> total-activity-time 0)
+          [:span {:style {:font-size 48}} "= " total-activity-time ])])]))
 
 (defn render-create-activity-form [year month day day-name]
   (let [categories-data @(rf/subscribe [:categories])
