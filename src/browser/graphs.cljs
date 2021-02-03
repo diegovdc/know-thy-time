@@ -3,12 +3,12 @@
             [re-frame.core :as rf]
             [browser.utils :as utils]))
 
-(defn bars [title data]
+(defn bars [title data & {:keys [chart-height]}]
   [:div {:style {:background-color "white"
-                 :max-width 500
-                 :width 500}}
+                 :width "100%"}}
    title
    [:> Bar {:data data
+            :height chart-height
             :options {:legend {:labels {:boxWidth 0}}
                       :scales {:yAxes [{:ticks {:beginAtZero true
                                                 :suggestedMax 100}}]}}}]])

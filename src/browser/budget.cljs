@@ -101,12 +101,13 @@
                                         acts-by-cat))]
     [:div
      (accordion
-      2
-      [["Fixed and free time"
+      0
+      [["Charts"
+        [:div
+         (graphs/bars "" @(rf/subscribe [:monthly-categories-graph-data])
+                      :chart-height 65)
+         (graphs/bars "" @(rf/subscribe [:monthly-activities-graph-data]))]]
+       ["Fixed and free time"
         (fixed-and-free-time cat fixed-time free-time month-free-time)]
        ["Monthly Budget"
-        (monthly-budget cats spent-time-by-cat month-free-time [year month])]
-       ["Charts"
-        [:div
-         (graphs/bars "" @(rf/subscribe [:monthly-categories-graph-data]))
-         (graphs/bars "" @(rf/subscribe [:monthly-activities-graph-data]))]]])]))
+        (monthly-budget cats spent-time-by-cat month-free-time [year month])]])]))

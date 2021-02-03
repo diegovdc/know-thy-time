@@ -48,6 +48,18 @@ body {
   &__budget {
     position: sticky;
     top: 0;
+    height: 100vh;
+    overflow: scroll;
+    &::-webkit-scrollbar {
+      display: none;
+      -ms-overflow-style: none; /* IE and Edge */
+      scrollbar-width: none; /* Firefox */
+    }
+
+    &-container {
+      max-width: 945px;
+      width: 100%;
+    }
   }
 }
 

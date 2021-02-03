@@ -5,8 +5,7 @@
 (defn main
   []
   [:div {:class "main-view__container"}
-   [:div
-    [:div {:class "main-view__month"} [month/main]]]
-   [:div
+   [:div {:class "main-view__month"} [month/main]]
+   [:div {:class "main-view__budget-container"}
     [:div {:style {}}]
     [:div {:class "main-view__budget"} (budget/main)]]])
