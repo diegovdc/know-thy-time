@@ -1,7 +1,7 @@
 (ns browser.month
   (:require ["date-fns" :as d]
             ["react-bootstrap" :as rb]
-            [browser.utils :as utils :refer [get-category-value]]
+            [browser.utils :as utils :refer [get-category-value format-float]]
             [goog.string :as gstr]
             [goog.string.format]
             [re-frame.core :as rf]
@@ -59,13 +59,13 @@
                             (filter first)
                             (sort-by second))
         cat-colors @(rf/subscribe [:categories-colors])
-        total-activity-time  (apply + (map second activity-time))
+        total-activity-time (apply + (map second activity-time))
         total-free-time (- 24 total-activity-time)
         fixed-time @(rf/subscribe [:fixed-time])
         available-time (->> (apply + (vals fixed-time)) (- total-free-time))]
     [:div
      [:p {:class (str "mb-1" (when (> 0 available-time) " text-danger "))}
-      "Available time: " available-time]
+      "Available time: " (format-float available-time)]
      (when (> total-free-time 0)
        [:div {:class "mb-3 d-flex align-items-center"}
         (map (fn [[cat time]]
@@ -84,7 +84,7 @@
                                     :style style)]))
              activity-time)
         (when (> total-activity-time 0)
-          [:span {:style {:font-size 48}} "= " total-activity-time ])])]))
+          [:span {:style {:font-size 48}} "= " (format-float total-activity-time) ])])]))
 
 (defn render-create-activity-form [year month day day-name]
   (let [categories-data @(rf/subscribe [:categories])
@@ -125,32 +125,32 @@
                                  :month month
                                  :day day
                                  :id (str (random-uuid))})]
-    (when create?
-      (js/console.debug "validation" (s/explain-str ::db/day-activity created-activity))
-      [:> rb/Form {:class "form-width"}
-       (utils/select "Category" (@new-activity :cat "")
-                     on-cat-change categories-options)
-       (cond
-         (and (-> @new-activity :cat empty? not) (not acts-for-cat?))
-         [:p {:class "text-warning"}
-          "Please register at least one activity for this category"]
-         acts-for-cat?
-         [:div
-          (utils/select "Activity" (@new-activity :act "") on-act-change
-                        activities-options)
-          (utils/input "Duration" (@new-activity :time 0) on-time-change
-                       :type "number")
-          (utils/input "Description" (@new-activity :description "")
-                       on-description-change)]
-         :default nil)
+      (when create?
+        (js/console.debug "validation" (s/explain-str ::db/day-activity created-activity))
+        [:> rb/Form {:class "form-width"}
+         (utils/select "Category" (@new-activity :cat "")
+                       on-cat-change categories-options)
+         (cond
+           (and (-> @new-activity :cat empty? not) (not acts-for-cat?))
+           [:p {:class "text-warning"}
+            "Please register at least one activity for this category"]
+           acts-for-cat?
+           [:div
+            (utils/select "Activity" (@new-activity :act "") on-act-change
+                          activities-options)
+            (utils/input "Duration" (@new-activity :time 0) on-time-change
+                         :type "number")
+            (utils/input "Description" (@new-activity :description "")
+                         on-description-change)]
+           :default nil)
 
 
-       (utils/submit-btn
-        "Add"
-        (fn []
-          (rf/dispatch [:create-activity created-activity])
-          (reset! new-activity {}))
-        :disabled (not (s/valid? ::db/day-activity created-activity)))])))
+         (utils/submit-btn
+          "Add"
+          (fn []
+            (rf/dispatch [:create-activity created-activity])
+            (reset! new-activity {}))
+          :disabled (not (s/valid? ::db/day-activity created-activity)))])))
 
 (defn main []
   (r/create-class
