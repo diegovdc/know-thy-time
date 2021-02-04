@@ -6,12 +6,13 @@
                                      initial-alert]]
             [re-frame.core :as rf]))
 
-(defn initialize-db [] {:current-route nil
+(defn initialize-db [] {:version "0.0.1"
+                        :current-route nil
                         :router nil
                         :activities (get-activities)
                         :categories (get-categories)
-                        :alert initial-alert
                         :fixed-time (get-fixed-time)
+                        :alert initial-alert
                         :year nil
                         :month nil
                         :time (js/Date.) ;; What it returns becomes the new application state

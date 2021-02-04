@@ -66,6 +66,14 @@
 (rf/reg-event-db :set-month (fn [db [_ year]] (assoc db :month year)))
 
 (rf/reg-event-fx
+ :restore-backup
+ (fn [{:keys [db]} [_ backup]]
+   {:db (merge db backup)
+    :fx [[:save-categories]
+         [:save-activities]
+         [:save-fixed-time]]}))
+
+(rf/reg-event-fx
  :create-category
  (fn [{:keys [db]} [_ category-name]]
 
@@ -170,8 +178,23 @@
 
 
 ;; -- Domino 4 - Query  -------------------------------------------------------
-
-
+(rf/reg-sub
+ :backup
+ (fn [{:keys [version activities categories fixed-time]} _]
+   (pr-str {:version version
+            :activities activities
+            :categories categories
+            :fixed-time fixed-time})))
+(rf/reg-sub
+ :backup-json
+ (fn [{:keys [version activities categories fixed-time]} _]
+   (js/JSON.stringify (clj->js {:version version
+                                :activities activities
+                                :categories categories
+                                :fixed-time fixed-time}))))
+(comment
+  @(rf/subscribe [:backup])
+  @(rf/subscribe [:backup-json]))
 (rf/reg-sub
  :time
  (fn [db _] ;; db is current app state. 2nd unused param is query vector

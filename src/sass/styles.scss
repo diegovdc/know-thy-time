@@ -44,6 +44,7 @@ body {
   &__month {
     min-width: 300px;
     margin-right: 30px;
+    flex-shrink: 0;
   }
   &__budget {
     position: sticky;
@@ -135,5 +136,22 @@ body {
         opacity: 1;
       }
     }
+  }
+}
+
+.restore-backup {
+  &__container {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  &__input {
+    position: absolute;
+    opacity: 0;
+    z-index: 2;
+    cursor: pointer;
+  }
+  &__button {
+    cursor: pointer;
   }
 }

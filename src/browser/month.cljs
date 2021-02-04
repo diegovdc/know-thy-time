@@ -162,7 +162,7 @@
           (.scrollIntoView day-elem)
           (swap! show-activities assoc day true))
        100)
-      (println "component did mount" (d/getDate (js/Date.))))
+      #_(println "component did mount" (d/getDate (js/Date.))))
     :reagent-render
     (fn []
       (let [activities @(rf/subscribe [:activities])
@@ -184,8 +184,8 @@
                           {:variant "outline-light"
                            :on-click (fn [] (swap! create-activity #(if (= % name) nil name)))}
                           (if create? "-" "New activity")]]]
-                       (render-create-activity-form year month day name)
                        [:div
                         (daily-activity-data activities)
+                        (render-create-activity-form year month day name)
                         (render-activities day activities)]]))
                   dates))]])))}))
