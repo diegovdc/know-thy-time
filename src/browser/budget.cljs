@@ -1,6 +1,7 @@
 (ns browser.budget
   (:require [browser.graphs :as graphs]
             [browser.utils :as utils]
+            [browser.views.categories :as categories]
             [re-frame.core :as rf]
             [react-bootstrap :as rb]))
 
@@ -16,11 +17,11 @@
    [:td (utils/format-float left)]
    [:td (utils/percentage-string left-%)]])
 
-(defn monthly-budget [categories spent-time-by-cat month-free-time [year month]]
+(defn monthly-budget [categories spent-time-by-cat month-free-time]
   (let [cats-data
         (map (fn [[cat data]]
-               (let [cat-data (utils/get-category-value [year month] data)
-                     cat-color (cat-data :color)
+               (let [cat-data (categories/get-category-value data)
+                     cat-color (categories/get-category-color cat)
                      sched-time (spent-time-by-cat cat 0)
                      total-time (/ (* month-free-time (cat-data :percentage)) 100)
                      left (- total-time sched-time)
@@ -87,7 +88,7 @@
 (defn main []
   (let [fixed-time @(rf/subscribe [:fixed-time])
         {:keys [free-time month-free-time]} @(rf/subscribe [:free-time])
-        cats @(rf/subscribe [:categories])
+        cats @(rf/subscribe [::categories/current-month-categories])
         acts @(rf/subscribe [:activities])
         year  @(rf/subscribe [:year])
         month @(rf/subscribe [:month])
@@ -110,4 +111,4 @@
        ["Fixed and free time"
         (fixed-and-free-time cat fixed-time free-time month-free-time)]
        ["Monthly Budget"
-        (monthly-budget cats spent-time-by-cat month-free-time [year month])]])]))
+        (monthly-budget cats spent-time-by-cat month-free-time)]])]))

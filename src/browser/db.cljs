@@ -1,9 +1,10 @@
 (ns browser.db
-  (:require [clojure.spec.alpha :as s]
-            [browser.db.init :refer [get-activities
-                                     get-categories
-                                     get-fixed-time
-                                     initial-alert]]
+  (:require [browser.db.init
+             :refer
+             [get-activities get-categories get-fixed-time initial-alert]]
+            [browser.views.categories :as categories]
+            [clojure.spec.alpha :as s]
+            [date-fns :as d]
             [re-frame.core :as rf]))
 
 (defn initialize-db [] {:version "0.0.1"
@@ -13,8 +14,8 @@
                         :categories (get-categories)
                         :fixed-time (get-fixed-time)
                         :alert initial-alert
-                        :year nil
-                        :month nil
+                        :year (d/getYear (js/Date.))
+                        :month (d/getMonth (js/Date.))
                         :time (js/Date.) ;; What it returns becomes the new application state
                         :time-color "#abc"})
 
@@ -22,9 +23,10 @@
   ((set (keys @(rf/subscribe [:categories]))) cat))
 
 (defn in-activities? [act]
-  (let [acts (->> @(rf/subscribe [:categories])
+  (let [year-month @(rf/subscribe [::categories/current-configured-month])
+        acts (->> @(rf/subscribe [:categories])
                   vals
-                  (mapcat (comp keys :activities :default))
+                  (mapcat (comp keys :activities #(get % year-month)))
                   set)]
     (acts act)))
 

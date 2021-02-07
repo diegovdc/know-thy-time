@@ -1,16 +1,18 @@
 (ns browser.main
   (:require [browser.budget :as budget]
-            [browser.month :as month]
-            [browser.router :as router]
             [browser.db :as db]
             [browser.db.init :as db-init]
+            [browser.month :as month]
+            [browser.router :as router]
+            [browser.utils :as utils]
+            [browser.views.categories
+             :refer
+             [ensure-category-configs-exist-in-month]]
+            [clojure.set :as set]
             [clojure.spec.alpha :as s]
             [clojure.string :as str]
-            [re-frame.core :as rf]
             [clojure.walk :as walk]
-            [browser.utils :as utils]
-            [clojure.set :as set]))
-
+            [re-frame.core :as rf]))
 
 ;; A detailed walk-through of this source code is provided in the docs:
 ;; https://day8.github.io/re-frame/dominoes-live/
@@ -73,26 +75,55 @@
          [:save-activities]
          [:save-fixed-time]]}))
 
+;; TODO use update category to instanciate a new category config for each month
+;; Look for previous config if not and use that as a basis for the new config
+;; else use the default config
+
+
+
 (rf/reg-event-fx
  :create-category
  (fn [{:keys [db]} [_ category-name]]
 
-   {:db (if (empty? category-name)
-          (assoc db :alert {:variant "danger" :msg "The category must have a name"})
-          (assoc-in db [:categories category-name :default]
-                    {:percentage 0
-                     :color {"r" (rand-int 255)
-                             "g" (rand-int 255)
-                             "b" (rand-int 255)
-                             "a" 1}
-                     :activities {}}))
+   {:db (let [new-cat {:percentage 0
+                       :color {"r" (rand-int 255)
+                               "g" (rand-int 255)
+                               "b" (rand-int 255)
+                               "a" 1}
+                       :activities {}}
+              year (:year db)
+              month (:month db)]
+          (cond
+            (empty? category-name)
+            (assoc db :alert
+                   {:variant "danger"
+                    :msg "The category must have a name"})
+
+            (-> db :categories (get category-name))
+            (assoc db :alert
+                   {:variant "danger"
+                    :msg "The category already exists"})
+
+            :else
+            (-> db
+                ensure-category-configs-exist-in-month
+                (assoc-in [:categories category-name :default] new-cat)
+                (assoc-in [:categories category-name [year month]] new-cat))))
     :fx (if (empty? category-name) []
             [[:save-categories]])}))
+(ensure-category-configs-exist-in-month
+ {:categories {"cat-a" {:default {:a :b}
+                        [2020 12] {}
+                        [2021 2] {:c :d}}}
+  :year 2020
+  :month 1})
 
 (rf/reg-event-fx
  :update-category
  (fn [{:keys [db]} [_ values-path value]]
-   {:db (assoc-in db (concat [:categories] values-path) value)
+   {:db (-> db
+            ensure-category-configs-exist-in-month
+            (assoc-in (concat [:categories] values-path) value))
     :fx [[:save-categories]]}))
 
 (defn remove-activities-of-category [activities category-name]
@@ -117,7 +148,19 @@
 (rf/reg-event-fx
  :create-category-activity
  (fn [{:keys [db]} [_ values-path value]]
-   {:db (assoc-in db (concat [:categories] values-path) value)
+   (println value)
+   {:db (cond
+          (empty? (last values-path))
+          (assoc db :alert
+                 {:variant "danger"
+                  :msg "The activity  must have a name"})
+
+          (-> db (get-in (concat [:categories] values-path)))
+          (assoc db :alert
+                 {:variant "danger"
+                  :msg "The activity already exists"})
+
+          :else (assoc-in db (concat [:categories] values-path) value))
     :fx [[:save-categories]]}))
 
 (rf/reg-event-fx
@@ -126,6 +169,7 @@
    {:db (update-in db (concat [:categories] values-path) dissoc activity-name)
     :fx [[:save-categories]]}))
 
+;; Daily activities
 (rf/reg-event-fx
  :create-activity
  (fn [{:keys [db]} [_ {:keys [year month day id] :as activity}]]
@@ -158,6 +202,7 @@
 
 (rf/reg-event-fx
  :close-alert
+
  (fn [{:keys [db]} [_]]
    {:db (assoc db :alert db-init/initial-alert)}))
 
@@ -178,6 +223,8 @@
 
 
 ;; -- Domino 4 - Query  -------------------------------------------------------
+(rf/reg-sub :db (fn  [db _] db))
+
 (rf/reg-sub
  :backup
  (fn [{:keys [version activities categories fixed-time]} _]
@@ -185,6 +232,7 @@
             :activities activities
             :categories categories
             :fixed-time fixed-time})))
+
 (rf/reg-sub
  :backup-json
  (fn [{:keys [version activities categories fixed-time]} _]
@@ -192,9 +240,12 @@
                                 :activities activities
                                 :categories categories
                                 :fixed-time fixed-time}))))
+
 (comment
+  (:year @(rf/subscribe [:db]))
   @(rf/subscribe [:backup])
   @(rf/subscribe [:backup-json]))
+
 (rf/reg-sub
  :time
  (fn [db _] ;; db is current app state. 2nd unused param is query vector
@@ -211,6 +262,11 @@
 (rf/reg-sub :activities (fn [db _] (:activities db)))
 (rf/reg-sub :month (fn [db _] (:month db)))
 (rf/reg-sub :year (fn [db _] (:year db)))
+(rf/reg-sub :year-month
+            :<- [:year]
+            :<- [:month]
+            (fn [[year month] _] [year month]))
+
 (rf/reg-sub :categories-colors
             (fn [db _] (->> (:categories db)
                            (map (fn [[cat data]]

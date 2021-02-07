@@ -3,7 +3,7 @@
             [browser.views.main :as views]
             [browser.views.categories :as categories]
             [browser.views.fixed-time :as fixed-time]
-            [date-fns :as d]))
+            ["date-fns" :as d]))
 
 
 

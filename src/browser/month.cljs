@@ -1,13 +1,14 @@
 (ns browser.month
   (:require ["date-fns" :as d]
             ["react-bootstrap" :as rb]
-            [browser.utils :as utils :refer [get-category-value format-float]]
-            [goog.string :as gstr]
-            [goog.string.format]
-            [re-frame.core :as rf]
-            [reagent.core :as r]
+            [browser.db :as db]
+            [browser.utils :as utils :refer [format-float get-category-value]]
+            [browser.views.categories :as categories]
             [clojure.spec.alpha :as s]
-            [browser.db :as db]))
+            [goog.string :as gstr]
+            goog.string.format
+            [re-frame.core :as rf]
+            [reagent.core :as r]))
 
 (defn days [month year]
   (mapv (fn [day] {:ymd [year month day]
@@ -31,7 +32,8 @@
       (doall
        (map
         (fn [{:keys [cat act time description id] :as activity}]
-          (let [category (-> @(rf/subscribe [:categories]) (get cat) :default)]
+          (let [year-month @(rf/subscribe [::categories/current-configured-month])
+                category (-> @(rf/subscribe [:categories]) (get-in [cat year-month]))]
             (when category
               [:div {:key id}
                [:div {:class "ml-2"}
@@ -87,12 +89,13 @@
           [:span {:style {:font-size 48}} "= " (format-float total-activity-time) ])])]))
 
 (defn render-create-activity-form [year month day day-name]
-  (let [categories-data @(rf/subscribe [:categories])
+  (let [year-month @(rf/subscribe [::categories/current-configured-month])
+        categories-data @(rf/subscribe [:categories])
         categories (->> categories-data keys sort)
         activities (->> categories-data
                         (map (fn [[cat data]]
                                [cat (:activities
-                                     (get-category-value [year month] data))]))
+                                     (get-category-value year-month data))]))
                         (into {}))
         create? (= @create-activity day-name)
 
@@ -144,7 +147,9 @@
                          on-description-change)]
            :default nil)
 
-
+         (js/console.debug "Activity is valid?"
+                           (s/valid? ::db/day-activity created-activity)
+                           (s/explain-str ::db/day-activity created-activity))
          (utils/submit-btn
           "Add"
           (fn []
@@ -161,8 +166,7 @@
               day-elem (js/document.getElementById (str "day-" day))]
           (.scrollIntoView day-elem)
           (swap! show-activities assoc day true))
-       100)
-      #_(println "component did mount" (d/getDate (js/Date.))))
+       100))
     :reagent-render
     (fn []
       (let [activities @(rf/subscribe [:activities])

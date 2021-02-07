@@ -5,9 +5,10 @@
             [clojure.string :as str]
             [react-bootstrap-icons :as icons]))
 
-(defn get-category-value [[year month] category]
-  (or (get category [year month])
-      (get category :default)))
+(defn get-category-value [year-month category]
+  ;; FIXME convert into a subscription
+  (cond (vector? year-month) (get category year-month)
+        :else (get category :default)))
 
 (defn get-input-string [event]
   (-> event .-target .-value))
@@ -16,13 +17,14 @@
   (-> event .-target .-value js/Number))
 
 (defn categories-total-percentage
+  ;; FIXME convert into a subscription
   "Total percentage of time allocated to all categories.
   Useful for knowing if there is still time to be distributed or not"
   ([categories] (categories-total-percentage categories nil))
-  ([categories [year month]]
+  ([categories year-month]
    (->> categories vals
         (map (fn [cat]
-               (:percentage (get-category-value [year month] cat))))
+               (:percentage (get-category-value year-month cat))))
         (apply +))))
 
 (defn get-color-string [color]
