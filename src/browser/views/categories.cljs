@@ -271,7 +271,6 @@
                                  :total-hours total-hours})))
                        (sort-by :total-hours)
                        reverse)
-         _ (println cat-data)
          data (map (comp #(.toFixed % 2) :advance) cat-data)
          cat-names (map :name cat-data)
          background-colors (map #(-> cats (get %)

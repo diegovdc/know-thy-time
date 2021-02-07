@@ -150,7 +150,6 @@
 (rf/reg-event-fx
  :create-category-activity
  (fn [{:keys [db]} [_ values-path value]]
-   (println value)
    {:db (cond
           (empty? (last values-path))
           (assoc db :alert
@@ -330,7 +329,6 @@
  :<- [:time-by-activities-of-month-by-cat]
  (fn [[categories year-month acts-time-by-cat] _]
    (let [cats (->> categories (map (fn [[cat val]] [cat (get val year-month)])) (into {}))
-         _ (println "acts" cats)
          labels (->> acts-time-by-cat (mapcat second) (map first))
          data (->> acts-time-by-cat (mapcat second) (map (comp #(.toFixed % 2) second)))
 

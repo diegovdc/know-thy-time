@@ -50,8 +50,12 @@
    [:div {:class "arrow"}
     [:div {:class "tooltip-inner"} children]]])
 
-(defn format-float [number]
-  (str/replace (.toFixed number 2) ".00" ""))
+(defn format-float
+  "Format float to fixed number of places, prints numbers like 5.00 as integers"
+  ([number] (format-float number 2))
+  ([number places]
+   (let [zeros-to-remove (str "." (str/join (repeat places "0")))]
+     (str/replace (.toFixed number places) zeros-to-remove ""))))
 
 (defn percentage-string [number]
   (str (format-float number) "%"))

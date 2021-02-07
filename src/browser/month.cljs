@@ -80,13 +80,14 @@
                   [:span {:class "absolute-centered"
                           :style {:color color-str
                                   :font-size 18}}
-                   [:b time]]
+                   [:b (utils/format-float time 1)]]
                   (utils/render-dot color
-                                    (+ 42 (* 3  time))
+                                    (+ 40 (* 5 (js/Math.log (js/Math.pow 10 time))))
                                     :style style)]))
              activity-time)
-        (when (> total-activity-time 0)
-          [:span {:style {:font-size 48}} "= " (format-float total-activity-time) ])])]))
+        ;; TODO will probably remove this
+        #_(when (> total-activity-time 0)
+            [:span {:style {:font-size 48}} "= " (format-float total-activity-time) ])])]))
 
 (defn render-create-activity-form [year month day day-name]
   (let [year-month @(rf/subscribe [::categories/current-configured-month])
