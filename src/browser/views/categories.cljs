@@ -242,3 +242,50 @@
 (defn get-category-color [category]
   (-> @(rf/subscribe [:categories]) (get category) :default :color) )
 (comment @(rf/subscribe [:categories]))
+
+(rf/reg-sub
+ ::monthly-categories-graph-data
+ :<- [::current-month-categories]
+ :<- [:activities]
+ :<- [:year]
+ :<- [:month]
+ :<- [:free-time]
+ :<- [::current-configured-month]
+ (fn [[categories activities year month {:keys [month-free-time]}
+      current-configured-month] _]
+   (let [cats (->> categories
+                   (map (fn [[cat val]] [cat (get val current-configured-month)]))
+                   (into {}))
+         acts (-> activities
+                  (get-in [year month])
+                  vals
+                  (->> (mapcat vals)
+                       (group-by :cat)))
+         cat-data (->> cats
+                       (map (fn [[cat data]]
+                              (let [cat-hours (-> data :percentage
+                                                  (/ 100) (* month-free-time))
+                                    total-hours (apply + (map :time (get acts cat)))]
+                                {:name cat
+                                 :advance (* 100 (/ total-hours cat-hours))
+                                 :total-hours total-hours})))
+                       (sort-by :total-hours)
+                       reverse)
+         _ (println cat-data)
+         data (map (comp #(.toFixed % 2) :advance) cat-data)
+         cat-names (map :name cat-data)
+         background-colors (map #(-> cats (get %)
+                                     :color
+                                     (assoc "a" 0.3)
+                                     utils/get-color-string)
+                                cat-names)
+         border-colors (map #(-> cats (get %)
+                                 :color
+                                 utils/get-color-string)
+                            cat-names)]
+     {:labels cat-names
+      :datasets [{:label "Advanced %"
+                  :data data
+                  :backgroundColor background-colors
+                  :borderColor border-colors
+                  :borderWidth 1}]})))

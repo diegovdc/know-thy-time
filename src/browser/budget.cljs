@@ -105,7 +105,7 @@
       0
       [["Charts"
         [:div
-         (graphs/bars "" @(rf/subscribe [:monthly-categories-graph-data])
+         (graphs/bars "" @(rf/subscribe [::categories/monthly-categories-graph-data])
                       :chart-height 65)
          (graphs/bars "" @(rf/subscribe [:monthly-activities-graph-data]))]]
        ["Fixed and free time"

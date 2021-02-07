@@ -6,6 +6,8 @@
             [browser.router :as router]
             [browser.utils :as utils]
             [browser.views.categories
+             :as
+             categories
              :refer
              [ensure-category-configs-exist-in-month]]
             [clojure.set :as set]
@@ -273,50 +275,6 @@
                                   [cat (->> data :default :color)]))
                            (into {}))))
 
-(rf/reg-sub
- :monthly-categories-graph-data
- :<- [:categories]
- :<- [:activities]
- :<- [:year]
- :<- [:month]
- :<- [:free-time]
- (fn [[categories activities year month {:keys [month-free-time]}] _]
-   (let [cats (->> categories
-                   (map (fn [[cat val]] [cat (:default val)]))
-                   (into {}))
-         acts (-> activities
-                  (get-in [year month])
-                  vals
-                  (->> (mapcat vals)
-                       (group-by :cat)))
-         cat-data (->> cats
-                       (map (fn [[cat data]]
-                              (let [cat-hours (-> data :percentage
-                                                  (/ 100) (* month-free-time))
-                                    total-hours (apply + (map :time (get acts cat)))]
-                                {:name cat
-                                 :advance (* 100 (/ total-hours cat-hours))
-                                 :total-hours total-hours})))
-                       (sort-by :total-hours)
-                       reverse)
-         data (map (comp #(.toFixed % 2) :advance) cat-data)
-         cat-names (map :name cat-data)
-         background-colors (map #(-> cats (get %)
-                                     :color
-                                     (assoc "a" 0.3)
-                                     utils/get-color-string)
-                                cat-names)
-         border-colors (map #(-> cats (get %)
-                                 :color
-                                 utils/get-color-string)
-                            cat-names)]
-     {:labels cat-names
-      :datasets [{:label "Advanced %"
-                  :data data
-                  :backgroundColor background-colors
-                  :borderColor border-colors
-                  :borderWidth 1}]})))
-
 (rf/reg-sub :activities-of-month
             :<- [:activities]
             :<- [:year]
@@ -325,9 +283,10 @@
               (-> activities (get-in [year month]) vals)))
 
 (rf/reg-sub :month-categories
-            :<- [:categories]
-            (fn [categories _]
-              (->> categories (map (fn [[cat val]] [cat (:default val)])) (into {}))))
+            :<- [::categories/current-month-categories]
+            :<- [::categories/current-configured-month]
+            (fn [[categories year-month] _]
+              (->> categories (map (fn [[cat val]] [cat (get val year-month)])) (into {}))))
 (rf/reg-sub
  :time-by-activities-of-month-by-cat
  :<- [:activities-of-month]
@@ -366,10 +325,12 @@
 
 (rf/reg-sub
  :monthly-activities-graph-data
- :<- [:categories]
+ :<- [::categories/current-month-categories]
+ :<- [::categories/current-configured-month]
  :<- [:time-by-activities-of-month-by-cat]
- (fn [[categories acts-time-by-cat] _]
-   (let [cats (->> categories (map (fn [[cat val]] [cat (:default val)])) (into {}))
+ (fn [[categories year-month acts-time-by-cat] _]
+   (let [cats (->> categories (map (fn [[cat val]] [cat (get val year-month)])) (into {}))
+         _ (println "acts" cats)
          labels (->> acts-time-by-cat (mapcat second) (map first))
          data (->> acts-time-by-cat (mapcat second) (map (comp #(.toFixed % 2) second)))
 
