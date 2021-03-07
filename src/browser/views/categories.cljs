@@ -263,12 +263,13 @@
                        (group-by :cat)))
          cat-data (->> cats
                        (map (fn [[cat data]]
-                              (let [cat-hours (-> data :percentage
-                                                  (/ 100) (* month-free-time))
+                              (let [estimated-hours (-> data :percentage
+                                                        (/ 100) (* month-free-time))
                                     total-hours (apply + (map :time (get acts cat)))]
                                 {:name cat
-                                 :advance (* 100 (/ total-hours cat-hours))
-                                 :total-hours total-hours})))
+                                 :advance (* 100 (/ total-hours estimated-hours))
+                                 :total-hours total-hours
+                                 :estimated-hours estimated-hours})))
                        (sort-by :total-hours)
                        reverse)
          data (map (comp #(.toFixed % 2) :advance) cat-data)
@@ -281,10 +282,15 @@
          border-colors (map #(-> cats (get %)
                                  :color
                                  utils/get-color-string)
-                            cat-names)]
+                            cat-names)
+         tooltip-labels (map (fn [{:keys [total-hours estimated-hours]}]
+                               (str (utils/format-float total-hours) "/"
+                                    (utils/format-float estimated-hours) " hrs"))
+                             cat-data)]
      {:labels cat-names
       :datasets [{:label "Advanced %"
                   :data data
                   :backgroundColor background-colors
                   :borderColor border-colors
+                  :tooltipLabels tooltip-labels
                   :borderWidth 1}]})))

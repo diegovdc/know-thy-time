@@ -85,6 +85,11 @@
       [:p {:class "mb-0"} [:b [:u free-time]] " hrs/day"]
       [:p {:class "mb-0"} [:b [:u month-free-time]] " hrs/month"]]]))
 
+
+(defn get-tooltip-labels
+  [tooltip-item data]
+  (get-in (js->clj data) ["datasets" 0 "tooltipLabels" (.-index tooltip-item)]))
+
 (defn main []
   (let [fixed-time @(rf/subscribe [:fixed-time])
         {:keys [free-time month-free-time]} @(rf/subscribe [:free-time])
@@ -105,9 +110,16 @@
       0
       [["Charts"
         [:div
-         (graphs/bars "" @(rf/subscribe [::categories/monthly-categories-graph-data])
-                      :chart-height 65)
-         (graphs/bars "" @(rf/subscribe [:monthly-activities-graph-data]))]]
+         (graphs/bars ""
+                      @(rf/subscribe [::categories/monthly-categories-graph-data])
+                      :chart-height 65
+                      :options {:tooltips
+                                {:callbacks
+                                 {:label get-tooltip-labels}}})
+         (graphs/bars "" @(rf/subscribe [:monthly-activities-graph-data])
+                      :options {:tooltips
+                                {:callbacks
+                                 {:label get-tooltip-labels}}})]]
        ["Fixed and free time"
         (fixed-and-free-time cat fixed-time free-time month-free-time)]
        ["Monthly Budget"

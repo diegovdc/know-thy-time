@@ -5,6 +5,8 @@
             [browser.month :as month]
             [browser.router :as router]
             [browser.utils :as utils]
+            [goog.string :as gstr]
+            [goog.string.format]
             [browser.views.categories
              :as
              categories
@@ -14,6 +16,7 @@
             [clojure.spec.alpha :as s]
             [clojure.string :as str]
             [clojure.walk :as walk]
+            ["date-fns" :as d]
             [re-frame.core :as rf]))
 
 ;; A detailed walk-through of this source code is provided in the docs:
@@ -30,17 +33,6 @@
 ;; `defonce` is like `def` but it ensures only one instance is ever
 ;; created in the face of figwheel hot-reloading of this file.
 (defonce do-timer (js/setInterval dispatch-timer-event 1000))
-
-(def categories
-  {"Trabajo" {:default {:percentage 30
-                        :activities {"Fundamentally" {:hrs 80}}}}
-   "Musica" {:default {:percentage 30
-                       :activities {"Taller Abierto" {:hrs 30}}}}
-   "Techxploration" {:default {:percentage 15
-                               :activities {"Budgetime" {:hrs 30}}}}
-   "Otros" {:default {:percentage 15
-                      :activities {"Inversiones" {:hrs 8}}}}
-   "Libre" {:default {:percentage 10}}})
 
 
 ;; -- Domino 2 - Event Handlers -----------------------------------------------
@@ -274,6 +266,26 @@
                                   [cat (->> data :default :color)]))
                            (into {}))))
 
+(rf/reg-sub :days-in-month
+            :<- [:year]
+            :<- [:month]
+            (fn [[year month] _] (d/getDaysInMonth (js/Date. year month))))
+
+(rf/reg-sub :available-hours
+            :<- [:fixed-time]
+            (fn [fixed-time _]
+              (- 24 (apply + (vals fixed-time)))))
+
+(rf/reg-sub :available-hours-in-month
+            :<- [:available-hours]
+            :<- [:days-in-month]
+            (fn [[fixed-time days-in-month] _]
+              (* fixed-time days-in-month)))
+
+(comment @(rf/subscribe [:days-in-month])
+         @(rf/subscribe [:available-hours])
+         @(rf/subscribe [:available-hours-in-month]))
+
 (rf/reg-sub :activities-of-month
             :<- [:activities]
             :<- [:year]
@@ -287,6 +299,7 @@
             (fn [[categories year-month] _]
               (->> categories (map (fn [[cat val]] [cat (get val year-month)])) (into {}))))
 (rf/reg-sub
+ ;; Completed percentage of time for each activity grouped by category
  :time-by-activities-of-month-by-cat
  :<- [:activities-of-month]
  :<- [:month-categories]
@@ -320,22 +333,52 @@
           (sort-by (comp (partial apply +) (partial map second) second))
           reverse))))
 
+(rf/reg-sub
+ :total-hours-per-activity-of-month
+ :<- [:activities-of-month]
+ (fn [activities-of-month _]
+   (->> activities-of-month
+        (mapcat vals)
+        (group-by (juxt :cat :act))
+        (map (fn [[k activities]] [k (->> activities (map :time) (apply +))]))
+        (into {}))))
+
+(comment
+  @(rf/subscribe [::categories/monthly-categories-graph-data])
+  @(rf/subscribe [:activities-of-month])
+  @(rf/subscribe [:month-categories])
+  @(rf/subscribe [::categories/current-month-categories])
+  @(rf/subscribe [:time-by-activities-of-month-by-cat]))
 
 
 (rf/reg-sub
  :monthly-activities-graph-data
- :<- [::categories/current-month-categories]
- :<- [::categories/current-configured-month]
+ :<- [:month-categories]
  :<- [:time-by-activities-of-month-by-cat]
- (fn [[categories year-month acts-time-by-cat] _]
-   (let [cats (->> categories (map (fn [[cat val]] [cat (get val year-month)])) (into {}))
-         labels (->> acts-time-by-cat (mapcat second) (map first))
+ :<- [:total-hours-per-activity-of-month]
+ (fn [[cats acts-time-by-cat hours-per-activity] _]
+   (let [labels (->> acts-time-by-cat (mapcat second) (map first))
          data (->> acts-time-by-cat (mapcat second) (map (comp #(.toFixed % 2) second)))
 
          colors-with-repeats
          (->> acts-time-by-cat
               (map (juxt (comp count second)
                          (comp :color (partial get cats) first))))
+
+         tooltip-labels
+         (->> acts-time-by-cat
+              (mapcat (fn [[cat-name acts]]
+                        (map (fn [[act _percentage]]
+                               (let [total-hours (get hours-per-activity
+                                                      [cat-name act] 0)
+                                     estimated-hours (get-in
+                                                      cats
+                                                      [cat-name :activities act :hrs]
+                                                      0)]
+                                 (gstr/format "%s/%s hrs"
+                                              (utils/format-float total-hours)
+                                              (utils/format-float estimated-hours))))
+                             acts))))
 
          background-colors
          (mapcat (fn [[n color]]
@@ -351,6 +394,7 @@
       :datasets [{:label "Exercised activities %"
                   :data data
                   :backgroundColor background-colors
+                  :tooltipLabels tooltip-labels
                   :borderColor border-colors
                   :borderWidth 1}]})))
 
@@ -384,7 +428,9 @@
    (month/main)])
 
 ;; -- Entry Point -------------------------------------------------------------
-(defn focus-current-month [ev]
+(defn focus-current-month
+  "alt+m to focus the current month menu item"
+  [ev]
   (when (and (.-altKey ev) (= 77 (.-keyCode ev)))
     (.focus (js/document.getElementById "Current month"))))
 
@@ -393,8 +439,13 @@
   (rf/clear-subscription-cache!)
   (rf/dispatch-sync [:initialize])
   (router/start-app!)
-  (js/window.addEventListener "keyup" focus-current-month))
+  (js/window.addEventListener "keyup" focus-current-month)
+  ;; Reinitialize database on window focus, so that different tabs are kept in sync
+  (js/window.addEventListener "focus" #(do (rf/dispatch-sync [:initialize])
+                                           (router/start-app!))))
 
+(comment
+  (rf/dispatch-sync [:initialize]))
 (defn ^:dev/after-load clear-cache-and-render!
   []
   ;; The `:dev/after-load` metadata causes this function to be called
