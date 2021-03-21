@@ -5,6 +5,8 @@
             [clojure.string :as str]
             [react-bootstrap-icons :as icons]))
 
+(def fmt-str gstr/format)
+
 (defn get-category-value [year-month category]
   ;; FIXME convert into a subscription
   (cond (vector? year-month) (get category year-month)

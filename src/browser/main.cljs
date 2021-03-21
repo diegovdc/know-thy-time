@@ -351,10 +351,10 @@
                                                       cats
                                                       [cat-name :activities act :hrs]
                                                       0)]
-                                 (gstr/format "%s/%s hrs (%s%)"
+                                 (gstr/format "%s/%s hrs (%s)"
                                               (utils/format-float total-hours)
                                               (utils/format-float estimated-hours)
-                                              percentage)))
+                                              (utils/percentage-string percentage))))
                              acts))))
 
          background-colors
@@ -409,6 +409,7 @@
   (js/window.addEventListener "keyup" focus-current-month)
   ;; Reinitialize database on window focus, so that different tabs are kept in sync
   (js/window.addEventListener "focus" reload-data-from-backup))
+
 
 (comment
   (rf/dispatch-sync [:initialize]))

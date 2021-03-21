@@ -3,14 +3,38 @@
             [browser.utils :as utils]
             [browser.views.categories :as categories]
             [re-frame.core :as rf]
-            [react-bootstrap :as rb]))
+            [react-bootstrap :as rb]
+            [date-fns :as d]))
+
+
+
+(rf/reg-sub
+ ;; From 0-100
+ ::elapsed-percentage-of-month
+ :<- [:days-in-month]
+ :<- [:year-month]
+ (fn [[days-in-month [year month]] _]
+   (let [today (js/Date.)]
+     (cond
+       ;; Current month
+       (and (= year (d/getYear today))
+            (= month (d/getMonth today)))
+       (* 100 (/ (d/getDate today) days-in-month))
+       ;; In a future year
+       (> year (d/getYear today)) 0
+       ;; Some month in the past
+       (> (d/getMonth today) month) 100
+       ;; Some month in the future
+       (< (d/getMonth today) month) 0
+       ;; who knows?
+       :default 0))))
 
 (defn budget-row
   [{:keys [cat cat-color sched-time total-time left left-%]}]
   [:tr {:key cat}
    [:td [:span {:key cat
                 :class "d-flex align-items-center"} [:span {:class "mr-2"}
-                (utils/render-dot cat-color 20)]
+                                                     (utils/render-dot cat-color 20)]
          cat]]
    [:td (utils/format-float total-time)]
    [:td (utils/format-float sched-time)]
@@ -97,6 +121,9 @@
         acts @(rf/subscribe [:activities])
         year  @(rf/subscribe [:year])
         month @(rf/subscribe [:month])
+        %-of-month  @(rf/subscribe [::elapsed-percentage-of-month])
+        cats-graph-data  @(rf/subscribe [::categories/monthly-categories-graph-data])
+        acts-graph-data @(rf/subscribe [:monthly-activities-graph-data])
         acts-by-cat (->> (get-in acts [year month])
                          vals
                          (apply merge)
@@ -108,15 +135,19 @@
     [:div
      (accordion
       0
-      [["Charts"
+      [[[:p "Charts "
+         [:small {:style {:color "white"}}
+          (utils/fmt-str "(%s elapsed)"
+                         (utils/percentage-string %-of-month))]]
         [:div
          (graphs/bars ""
-                      @(rf/subscribe [::categories/monthly-categories-graph-data])
+                     cats-graph-data
                       :chart-height 65
                       :options {:tooltips
                                 {:callbacks
                                  {:label get-tooltip-labels}}})
-         (graphs/bars "" @(rf/subscribe [:monthly-activities-graph-data])
+         (graphs/bars ""
+                      acts-graph-data
                       :options {:tooltips
                                 {:callbacks
                                  {:label get-tooltip-labels}}})]]
