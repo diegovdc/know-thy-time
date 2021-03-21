@@ -24,15 +24,6 @@
 
 ;; -- Domino 1 - Event Dispatch -----------------------------------------------
 
-(defn dispatch-timer-event
-  []
-  (let [now (js/Date.)]
-    (rf/dispatch [:timer now])))  ;; <-- dispatch used
-
-;; Call the dispatching function every second.
-;; `defonce` is like `def` but it ensures only one instance is ever
-;; created in the face of figwheel hot-reloading of this file.
-(defonce do-timer (js/setInterval dispatch-timer-event 1000))
 
 
 ;; -- Domino 2 - Event Handlers -----------------------------------------------
@@ -42,16 +33,6 @@
  (fn [_ _] ;; the two parameters are not important here, so use _
    (db/initialize-db)))    ;; so the application state will initially be a map with two keys
 
-(rf/reg-event-db ;; usage:  (dispatch [:time-color-change 34562])
- :time-color-change ;; dispatched when the user enters a new colour into the UI text field
- (fn [db [_ new-color-value]] ;; -db event handlers given 2 parameters:  current application state and event (a vector)
-   (assoc db :time-color new-color-value)))   ;; compute and return the new application state
-
-
-(rf/reg-event-db                 ;; usage:  (dispatch [:timer a-js-Date])
- :timer                         ;; every second an event of this kind will be dispatched
- (fn [db [_ new-time]]          ;; note how the 2nd parameter is destructured to obtain the data value
-   (assoc db :time new-time)))
 
 (rf/reg-event-db
  :router
@@ -68,12 +49,6 @@
     :fx [[:save-categories]
          [:save-activities]
          [:save-fixed-time]]}))
-
-;; TODO use update category to instanciate a new category config for each month
-;; Look for previous config if not and use that as a basis for the new config
-;; else use the default config
-
-
 
 (rf/reg-event-fx
  :create-category
@@ -217,6 +192,7 @@
 
 ;; -- Domino 4 - Query  -------------------------------------------------------
 (rf/reg-sub :db (fn  [db _] db))
+
 
 (rf/reg-sub
  :backup
@@ -368,16 +344,17 @@
          tooltip-labels
          (->> acts-time-by-cat
               (mapcat (fn [[cat-name acts]]
-                        (map (fn [[act _percentage]]
+                        (map (fn [[act percentage]]
                                (let [total-hours (get hours-per-activity
                                                       [cat-name act] 0)
                                      estimated-hours (get-in
                                                       cats
                                                       [cat-name :activities act :hrs]
                                                       0)]
-                                 (gstr/format "%s/%s hrs"
+                                 (gstr/format "%s/%s hrs (%s%)"
                                               (utils/format-float total-hours)
-                                              (utils/format-float estimated-hours))))
+                                              (utils/format-float estimated-hours)
+                                              percentage)))
                              acts))))
 
          background-colors
@@ -399,33 +376,6 @@
                   :borderWidth 1}]})))
 
 
-;; -- Domino 5 - View Functions ----------------------------------------------
-
-(defn clock
-  []
-  [:div.example-clock
-   {:style {:color @(rf/subscribe [:time-color])}}
-   (-> @(rf/subscribe [:time])
-       .toTimeString
-       (str/split " ")
-       first)])
-
-(defn color-input
-  []
-  [:div.color-input
-   "Time color: "
-   [:input {:type "text"
-            :value @(rf/subscribe [:time-color])
-            :on-change #(rf/dispatch [:time-color-change (-> % .-target .-value)])}]])  ;; <---
-
-(defn ui
-  []
-  [:div
-   #_[:h1 "Hello world, it is now"]
-   #_[clock]
-   #_[color-input]
-   (budget/main)
-   (month/main)])
 
 ;; -- Entry Point -------------------------------------------------------------
 (defn focus-current-month
@@ -435,21 +385,37 @@
     (.focus (js/document.getElementById "Current month"))))
 
 
+(defn db-and-edn-data-have-diverged?
+  "Returns `true` if the current in-memory state of the window has diverged from
+  the backed-up in-disk edn data"
+  []
+  (-> @(rf/subscribe [:db])
+      (select-keys [:fixed-time :categories :activities])
+      (not= {:fixed-time (db-init/get-fixed-time)
+             :categories (db-init/get-categories)
+             :activities (db-init/get-activities)})))
+
+(defn reload-data-from-backup
+  "Used to reinitialize the app so that data is kept in sync between different windows"
+  [_ev]
+  (when (db-and-edn-data-have-diverged?)
+    (rf/dispatch [:initialize])
+    (router/start-app!)))
+
 (defn init []
   (rf/clear-subscription-cache!)
   (rf/dispatch-sync [:initialize])
   (router/start-app!)
   (js/window.addEventListener "keyup" focus-current-month)
   ;; Reinitialize database on window focus, so that different tabs are kept in sync
-  (js/window.addEventListener "focus" #(do (rf/dispatch-sync [:initialize])
-                                           (router/start-app!))))
+  (js/window.addEventListener "focus" reload-data-from-backup))
 
 (comment
   (rf/dispatch-sync [:initialize]))
 (defn ^:dev/after-load clear-cache-and-render!
   []
   ;; The `:dev/after-load` metadata causes this function to be called
-  ;; after shadow-cljs hot-reloads code. We force a UI update by clearing
+  ;; after shadow-cljs hot-reloads code. We force a UI qupdate by clearing
   ;; the Reframe subscription cache.
   (rf/clear-subscription-cache!)
   (js/window.removeEventListener "keyup" focus-current-month)
