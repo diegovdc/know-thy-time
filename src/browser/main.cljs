@@ -39,7 +39,10 @@
  (fn [db [_ router]]
    (assoc db :router router)))
 
+(rf/reg-event-db :hide-privacy-wall (fn [db _] (assoc db :show-privacy-wall? false)))
+
 (rf/reg-event-db :set-year (fn [db [_ year]] (assoc db :year year)))
+
 (rf/reg-event-db :set-month (fn [db [_ year]] (assoc db :month year)))
 
 (rf/reg-event-fx
@@ -274,6 +277,9 @@
             :<- [::categories/current-configured-month]
             (fn [[categories year-month] _]
               (->> categories (map (fn [[cat val]] [cat (get val year-month)])) (into {}))))
+
+(rf/reg-sub :show-privacy-wall? (fn [db _] (:show-privacy-wall? db)))
+
 (rf/reg-sub
  ;; Completed percentage of time for each activity grouped by category
  :time-by-activities-of-month-by-cat
@@ -402,11 +408,17 @@
     (rf/dispatch [:initialize])
     (router/start-app!)))
 
+(defn hide-privacy-wall [ev]
+  (when @(rf/subscribe [:show-privacy-wall?])
+    (rf/dispatch [:hide-privacy-wall])))
+
 (defn init []
   (rf/clear-subscription-cache!)
   (rf/dispatch-sync [:initialize])
   (router/start-app!)
   (js/window.addEventListener "keyup" focus-current-month)
+  (js/window.addEventListener "keyup"  hide-privacy-wall)
+  (js/window.addEventListener "click"  hide-privacy-wall)
   ;; Reinitialize database on window focus, so that different tabs are kept in sync
   (js/window.addEventListener "focus" reload-data-from-backup))
 

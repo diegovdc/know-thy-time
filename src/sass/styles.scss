@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Titillium+Web&display=swap");
+
 @mixin delete-btn {
   & .delete-btn {
     opacity: 0;
@@ -26,6 +28,7 @@ body {
 body {
   padding: 0 20px;
   min-height: 200vh;
+  font-family: "Titillium Web", sans-serif;
 }
 
 .form-width {
@@ -39,6 +42,28 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+
+.privacy-wall {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  z-index: 9999;
+  background-color: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  h1 {
+    margin-bottom: 0;
+    line-height: 1;
+    font-size: 80px;
+    position: relative;
+    top: -20px;
+    opacity: 0.6;
+  }
 }
 
 .main-view {

@@ -134,10 +134,17 @@
         ]
     [:ul {:class "d-flex justify-content-around"} routes (backup-link) (restore-button)]))
 
+
+(defn privacy-wall []
+  (when  @(re-frame/subscribe [:show-privacy-wall?])
+    [:div {:class "privacy-wall"}
+     [:h1 "Know thy time"]]))
+
 (defn router-component [{:keys [router]}]
   (let [current-route @(re-frame/subscribe [::current-route])]
     [:div
      (alert/main)
+     (privacy-wall)
      [nav {:router router :current-route current-route}]
      (when current-route
        [(-> current-route :data :view)])]))
