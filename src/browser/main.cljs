@@ -290,7 +290,9 @@
          (fn [cat [act act-data]]
            (let [act-budget (get-in month-categories [cat :activities act :hrs])
                  act-used-time (->> act-data (map :time) (apply +))]
-             [act (* 100 (/ act-used-time act-budget))]))
+             [act (if (or (nil? act-budget) (zero? act-budget))
+                    0
+                    (* 100 (/ act-used-time act-budget)))]))
 
          add-missing-activities
          (fn [cat exercised-acts]
@@ -331,7 +333,6 @@
   @(rf/subscribe [:month-categories])
   @(rf/subscribe [::categories/current-month-categories])
   @(rf/subscribe [:time-by-activities-of-month-by-cat]))
-
 
 (rf/reg-sub
  :monthly-activities-graph-data

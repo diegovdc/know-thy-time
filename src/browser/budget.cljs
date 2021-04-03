@@ -141,7 +141,7 @@
                          (utils/percentage-string %-of-month))]]
         [:div
          (graphs/bars ""
-                     cats-graph-data
+                      cats-graph-data
                       :chart-height 65
                       :options {:tooltips
                                 {:callbacks
