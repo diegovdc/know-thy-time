@@ -26,7 +26,7 @@ body {
 }
 
 body {
-  padding: 0 20px;
+  padding: 40px 20px 0;
   min-height: 200vh;
   font-family: "Titillium Web", sans-serif;
 }
@@ -66,6 +66,15 @@ body {
   }
 }
 
+.menu {
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+  z-index: 999;
+  background-color: black;
+}
+
 .main-view {
   &__container {
     display: flex;
@@ -89,6 +98,15 @@ body {
     &-container {
       max-width: 945px;
       width: 100%;
+    }
+    .accordion,
+    .card,
+    .card-header {
+      background-color: black;
+    }
+    .card-header {
+      padding: 0;
+      border: 1px solid white;
     }
   }
 }
@@ -183,5 +201,25 @@ body {
   }
   &__button {
     cursor: pointer;
+  }
+}
+
+.histogram-controls {
+  position: absolute;
+  width: 100%;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-top: 1px;
+  justify-content: space-around;
+  background-color: #000000ab;
+  opacity: 0.1;
+  transition: opacity 0.3s ease;
+  &:hover {
+    opacity: 1;
+  }
+  & input {
+    width: 50px;
+    margin: 0 5px;
   }
 }

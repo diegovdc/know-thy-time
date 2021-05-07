@@ -146,6 +146,7 @@
                       :options {:tooltips
                                 {:callbacks
                                  {:label get-tooltip-labels}}})
+
          (graphs/bars ""
                       acts-graph-data
                       :options {:tooltips

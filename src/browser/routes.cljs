@@ -1,11 +1,10 @@
 (ns browser.routes
-  (:require [re-frame.core :as rf]
-            [browser.views.main :as views]
+  (:require ["date-fns" :as d]
             [browser.views.categories :as categories]
             [browser.views.fixed-time :as fixed-time]
-            ["date-fns" :as d]))
-
-
+            [browser.views.histogram :as histogram]
+            [browser.views.main :as views]
+            [re-frame.core :as rf]))
 
 ;;; Views ;;;
 
@@ -66,4 +65,11 @@
        :start (fn [& params]
                 (rf/dispatch [:set-year (-> params first :path :year int)])
                 (rf/dispatch [:set-month (-> params first :path :month int)]))
+       :stop  (fn [& params] (js/console.log "Leaving sub-page 1"))}]}]
+   ["histogram"
+    {:name      ::histogram
+     :view      histogram/main
+     :link-text "Histogram"
+     :controllers
+     [{:start (fn [& params] (js/console.log "Entering sub-page 1"))
        :stop  (fn [& params] (js/console.log "Leaving sub-page 1"))}]}]])

@@ -126,13 +126,14 @@
                :text "Previous month"
                :params (dutils/prev-month year month)}
               {:route-name ::routes/home}
-              {:route-name ::routes/categories}
-              {:route-name ::routes/fixed-time}
               {:route-name ::routes/calendar
                :text "Next month"
-               :params (dutils/next-month year month)}])
+               :params (dutils/next-month year month)}
+              {:route-name ::routes/categories}
+              {:route-name ::routes/fixed-time}
+              {:route-name ::routes/histogram}])
         ]
-    [:ul {:class "d-flex justify-content-around"} routes (backup-link) (restore-button)]))
+    [:ul {:class "d-flex justify-content-around menu"} routes (backup-link) (restore-button)]))
 
 
 (defn privacy-wall []

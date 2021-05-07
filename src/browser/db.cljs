@@ -10,7 +10,7 @@
 (defn initialize-db [] {:version "0.0.1"
                         :current-route nil
                         :router nil
-                        :show-privacy-wall? true
+                        :show-privacy-wall? (if-not goog.DEBUG true false)
                         :activities (get-activities)
                         :categories (get-categories)
                         :fixed-time (get-fixed-time)
