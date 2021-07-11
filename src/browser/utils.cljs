@@ -75,6 +75,14 @@
      :placeholder placeholder
      :on-change on-change}]])
 
+(defn checkbox [label checked? on-change]
+  [:> rb/Form.Group {:control-id label :class "checkbox"}
+   [:> rb/Form.Label label]
+   [:> rb/Form.Control
+    {:type "checkbox"
+     :checked checked?
+     :on-change #(-> % .-target .-checked on-change) }]])
+
 (defn input-with-btn
   [placeholder btn-text value on-change on-click
    & {:keys [btn-variant]
@@ -97,7 +105,6 @@
      :on-change on-change}
     options]])
 
-
 (defn submit-btn [text on-click & {:keys [disabled]}]
   [:div
    [:> rb/Button
@@ -106,6 +113,22 @@
      :disabled disabled}
     text]])
 
+(defn edit-btn [on-click]
+  [:span {:class "ml-2 delete-btn"}
+   [:> rb/Button
+    {:type "button"
+     :variant "secondary"
+     :on-click on-click}
+    [:> icons/Pencil]]])
+
+(defn done-btn [on-click]
+  [:span {:class "ml-2 delete-btn"}
+   [:> rb/Button
+    {:type "button"
+     :variant "info"
+     :on-click on-click}
+    [:> icons/CheckCircle]]])
+
 (defn delete-btn [on-click]
   [:span {:class "ml-2 delete-btn"}
    [:> rb/Button
@@ -113,3 +136,12 @@
      :variant "danger"
      :on-click on-click}
     [:> icons/Trash]]])
+
+
+(defn modal [title body show? close]
+  [:> rb/Modal {:show show?}
+   [:> rb/Modal.Header [:div [:> rb/Modal.Title title]
+                        [:button {:class "modal__close"
+                                :on-click close}
+                         [:> icons/XCircle]]]]
+   [:> rb/Modal.Body body]])

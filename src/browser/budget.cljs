@@ -70,6 +70,7 @@
                                  (when unit* (unit unit*))]])]
 
     [:div [:h1 "Monthly Budget"]
+     [:div [:small "Note: Also counts events marked as \"todo\""]]
      [:> rb/Table
       [:thead [:tr
                (th "Category" nil)

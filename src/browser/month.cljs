@@ -19,9 +19,15 @@
         (range 1 (inc (d/getDaysInMonth (js/Date. year month ))))))
 
 (defonce create-activity (r/atom nil))
+(def edit-activity-modal-state (r/atom {::show? false}))
 (defonce new-activity (r/atom {}))
 
 (defonce show-activities (r/atom {}))
+
+(defn todo-str [todo?] (if todo? "(todo)" ""))
+
+
+
 (defn render-activities [day-name activities]
   [:div {:class "d-flex month__activity"}
    (if-not (-> @show-activities (get day-name))
@@ -29,31 +35,47 @@
                :on-click #(swap! show-activities assoc day-name true)}
       [:u (gstr/format "Show activities (%s)" (count activities))]]
      [:div
-      (doall
-       (map
-        (fn [{:keys [cat act time description id] :as activity}]
-          (let [year-month @(rf/subscribe [::categories/current-configured-month])
-                category (-> @(rf/subscribe [:categories]) (get-in [cat year-month]))]
-            (when category
-              [:div {:key id}
-               [:div {:class "ml-2"}
+      (->> activities
+           (map
+            (fn [{:keys [cat act time description id todo?] :as activity}]
+              (let [year-month @(rf/subscribe [::categories/current-configured-month])
+                    category (-> @(rf/subscribe [:categories]) (get-in [cat year-month]))]
+                (when category
+                  [:div {:key id :class "month__activity_event"}
+                   [:div {:class "ml-2"}
 
-                [:p {:class "mb-0"}
-                 [:span {:class "mr-1"}
-                  (utils/render-dot (:color category) 16)]
-                 (gstr/format "%s %shr%s" act time (if (= time 1) "" "s"))
+                    [:p {:class (str "mb-0 " (when todo? "text-info"))}
+                     [:span {:class "mr-1"} (utils/render-dot (:color category) 16)]
+                     (gstr/format "%s %s %shr%s" (todo-str todo?) act time (if (= time 1) "" "s"))
 
-                 [:span {:class "ml-2 month__activity_delete"}
-                  (utils/delete-btn #(rf/dispatch [:delete-activity activity]))]]
+                     (when todo?
+                       [:span {:class "ml-2 month__activity_mark-as-done"}
+                        (utils/done-btn #(rf/dispatch [:mark-todo-as-done activity]))])
 
-                [:p {:style {:max-width 200}}
-                 [:small cat (when description (str ": " description))]]]])))
-        activities))
+                     [:span {:class "ml-2 month__activity_delete"}
+                      (utils/edit-btn #(reset! edit-activity-modal-state
+                                               (assoc activity ::show? true)))]
+
+                     [:span {:class "ml-2 month__activity_delete"}
+                      (utils/delete-btn #(do
+                                           (println activity)
+                                           (rf/dispatch [:delete-activity activity])))]]
+
+                    [:p {:style {:max-width 200}}
+                     [:small cat (when description (str ": " description))]]]]))))
+           doall)
       [:button {:class "btn" :on-click #(swap! show-activities dissoc day-name)}
        [:u "Hide activities"]]])])
 
+(defn set-todos-category
+  "Todo items will have the category set to \"Todo\""
+  [activities]
+  (map #(if (:todo? %) (assoc % :cat "Todo") %)
+       activities))
+
 (defn daily-activity-data [activities]
   (let [activity-time (->>  activities
+                             set-todos-category
                             (group-by :cat)
                             (map (fn [[cat data]]
                                    (when cat
@@ -65,18 +87,21 @@
         total-free-time (- 24 total-activity-time)
         fixed-time @(rf/subscribe [:fixed-time])
         available-time (->> (apply + (vals fixed-time)) (- total-free-time))]
+    (println activity-time)
     [:div
      [:p {:class (str "mb-1" (when (> 0 available-time) " text-danger "))}
       "Available time: " (format-float available-time)]
      (when (> total-free-time 0)
        [:div {:class "mb-3 d-flex align-items-center"}
         (map (fn [[cat time]]
-               (let [color (get cat-colors cat "#fff")
+               (let [color (get cat-colors cat {"r" 255 "g" 255 "b" 255 "a" 0.3})
                      color-str (utils/get-color-string color)
                      style {:background-color (utils/get-color-string
                                                (assoc color "a" 0.3))
                             :border (str "3px solid " color-str)}]
-                 [:span {:key cat :class "d-inline-block position-relative mr-2"}
+                 [:span {:key cat
+                         :class "d-inline-block position-relative mr-2"
+                         :title cat}
                   [:span {:class "absolute-centered"
                           :style {:color color-str
                                   :font-size 18}}
@@ -89,8 +114,10 @@
         #_(when (> total-activity-time 0)
             [:span {:style {:font-size 48}} "= " (format-float total-activity-time) ])])]))
 
-(defn render-create-activity-form [year month day day-name]
+(defn render-activity-form [dispatch-action spec activity-atom day show?]
   (let [year-month @(rf/subscribe [::categories/current-configured-month])
+        year @(rf/subscribe [:year])
+        month @(rf/subscribe [:month])
         categories-data @(rf/subscribe [:categories])
         categories (->> categories-data keys sort)
         activities (->> categories-data
@@ -98,7 +125,6 @@
                                [cat (:activities
                                      (get-category-value year-month data))]))
                         (into {}))
-        create? (= @create-activity day-name)
 
         categories-options
         (cons [:option {:key "---"}
@@ -106,7 +132,7 @@
               (map (fn [cat] [:option {:key cat :value cat} cat])
                    categories))
 
-        acts-for-cat (activities (@new-activity :cat []))
+        acts-for-cat (activities (@activity-atom :cat []))
         activities-options (cons [:option {:key "---"}
                                   "Choose an activity"]
                                  (map (fn [[act]]
@@ -115,49 +141,55 @@
         acts-for-cat? (seq acts-for-cat)
 
         ;; Handlers
-        on-cat-change #(swap! new-activity assoc
+        on-cat-change #(swap! activity-atom assoc
                               :cat (utils/get-input-string %) :act "")
-        on-act-change #(swap! new-activity assoc
+        on-act-change #(swap! activity-atom assoc
                               :act (utils/get-input-string %))
-        on-time-change #(swap! new-activity assoc
+        on-time-change #(swap! activity-atom assoc
                                :time (utils/get-input-number %))
-        on-description-change #(swap! new-activity assoc
+        on-description-change #(swap! activity-atom assoc
                                       :description (utils/get-input-string %))
+        on-todo-change #(swap! activity-atom assoc :todo? %)
         ;; results
-        created-activity (merge @new-activity
-                                {:year year
-                                 :month month
-                                 :day day
-                                 :id (str (random-uuid))})]
-      (when create?
-        (js/console.debug "validation" (s/explain-str ::db/day-activity created-activity))
-        [:> rb/Form {:class "form-width"}
-         (utils/select "Category" (@new-activity :cat "")
-                       on-cat-change categories-options)
-         (cond
-           (and (-> @new-activity :cat empty? not) (not acts-for-cat?))
-           [:p {:class "text-warning"}
-            "Please register at least one activity for this category"]
-           acts-for-cat?
-           [:div
-            (utils/select "Activity" (@new-activity :act "") on-act-change
-                          activities-options)
-            (utils/input "Duration" (@new-activity :time 0) on-time-change
-                         :type "number")
-            (utils/input "Description" (@new-activity :description "")
-                         on-description-change)]
-           :default nil)
+        resulting-activity (-> @activity-atom
+                             (dissoc ::show?)
+                             (merge {:year year
+                                     :month month
+                                     :day day}))]
+    (when show?
+      (js/console.debug "validation" (s/explain-str spec resulting-activity))
+      [:> rb/Form {:class "form-width"}
+       (utils/select "Category" (@activity-atom :cat "")
+                     on-cat-change categories-options)
+       (cond
+         (and (-> @activity-atom :cat empty? not) (not acts-for-cat?))
+         [:p {:class "text-warning"}
+          "Please register at least one activity for this category"]
+         acts-for-cat?
+         [:div
+          (utils/select "Activity" (@activity-atom :act "") on-act-change
+                        activities-options)
+          (utils/input "Duration" (@activity-atom :time 0) on-time-change
+                       :type "number")
+          (utils/input "Description" (@activity-atom :description "")
+                       on-description-change)
+          (utils/checkbox "Todo?"
+                          (@activity-atom :todo? false)
+                          on-todo-change)]
+         :default nil)
 
-         (js/console.debug "Activity is valid?"
-                           (s/valid? ::db/day-activity created-activity)
-                           (s/explain-str ::db/day-activity created-activity))
-         (utils/submit-btn
-          "Add"
-          (fn []
-            (rf/dispatch [:create-activity created-activity])
-            (reset! new-activity {}))
-          :disabled (not (s/valid? ::db/day-activity created-activity)))])))
+       (js/console.debug "Activity is valid?"
+                         (s/valid? spec resulting-activity)
+                         (s/explain-str spec resulting-activity))
+       (utils/submit-btn
+        (if (= dispatch-action :create-activity)"Add" "Update")
+        (fn []
+          (rf/dispatch [dispatch-action resulting-activity])
+          (reset! activity-atom {}))
+        :disabled (not (s/valid? spec resulting-activity)))])))
 
+
+(defn close-modal [] (reset! edit-activity-modal-state {}))
 (defn main []
   (r/create-class
    {:component-did-mount
@@ -177,20 +209,32 @@
         (when (and year month)
           [:div
            [:h1 (d/format (js/Date. year month ) "MMM Y")]
+           (utils/modal "Edit activity"
+                        (render-activity-form :edit-activity
+                                              ::db/day-activity
+                                              edit-activity-modal-state
+                                              10
+                                              true)
+                        (::show? @edit-activity-modal-state)
+                        close-modal)
            [:div
             (doall
-             (map (fn [{:keys [name day]}]
-                    (let [create? (= @create-activity name)
+             (map (fn [{day-name :name  day :day}]
+                    (let [create? (= @create-activity day-name)
                           activities (vals (get-in activities [year month day]))]
-                      [:div {:key name}
-                       [:h2 {:id (str "day-" day)} name
+                      [:div {:key day-name}
+                       [:h2 {:id (str "day-" day)} day-name
                         [:span {:class "ml-2"}
                          [:> rb/Button
                           {:variant "outline-light"
-                           :on-click (fn [] (swap! create-activity #(if (= % name) nil name)))}
+                           :on-click (fn [] (swap! create-activity #(if (= % day-name) nil day-name)))}
                           (if create? "-" "New activity")]]]
                        [:div
                         (daily-activity-data activities)
-                        (render-create-activity-form year month day name)
+                        (render-activity-form :create-activity
+                                              ::db/day-activity-draft
+                                              new-activity
+                                              day
+                                              (= @create-activity day-name) )
                         (render-activities day activities)]]))
                   dates))]])))}))
