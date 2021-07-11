@@ -260,6 +260,7 @@
                   (get-in [year month])
                   vals
                   (->> (mapcat vals)
+                       (remove :todo?)
                        (group-by :cat)))
          cat-data (->> cats
                        (map (fn [[cat data]]

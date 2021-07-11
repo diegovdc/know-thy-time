@@ -143,6 +143,13 @@
 ;; Daily activities
 (rf/reg-event-fx
  :create-activity
+ (fn [{:keys [db]} [_ {:keys [year month day] :as activity}]]
+   (let [id (str (random-uuid))]
+     {:db (assoc-in db [:activities year month day id] (assoc activity :id id))
+      :fx [[:save-activities]]})))
+
+(rf/reg-event-fx
+ :edit-activity
  (fn [{:keys [db]} [_ {:keys [year month day id] :as activity}]]
    {:db (assoc-in db [:activities year month day id] activity)
     :fx [[:save-activities]]}))
@@ -151,6 +158,12 @@
  :delete-activity
  (fn [{:keys [db]} [_ {:keys [year month day id]}]]
    {:db (update-in db [:activities year month day] dissoc id)
+    :fx [[:save-activities]]}))
+
+(rf/reg-event-fx
+ :mark-todo-as-done
+ (fn [{:keys [db]} [_ {:keys [year month day id]}]]
+   {:db (update-in db [:activities year month day id] assoc :todo? false)
     :fx [[:save-activities]]}))
 
 (rf/reg-event-fx
@@ -273,7 +286,8 @@
             :<- [:year-month]
             (fn [[activities year-month] [_ year-month*]]
               (-> activities (get-in (or year-month* year-month)) vals)))
-
+(comment
+  (-> @(rf/subscribe [:activities-of-month])))
 (rf/reg-sub :month-categories
             :<- [::categories/current-month-categories]
             :<- [::categories/current-configured-month]
@@ -323,6 +337,7 @@
                   (get-in year-month)
                   vals
                   (->> (mapcat vals)
+                       (remove :todo?)
                        (group-by :act)
                        (mapcat (fn [[name acts]]
                                  {[(-> acts first :cat) name] (->> acts (map :time) (apply +))}))
@@ -407,7 +422,7 @@
    (let [activity-exercised-%
          (fn [cat [act act-data]]
            (let [act-budget (get-in month-categories [cat :activities act :hrs])
-                 act-used-time (->> act-data (map :time) (apply +))]
+                 act-used-time (->> act-data (remove :todo?) (map :time) (apply +))]
              [act (if (or (nil? act-budget) (zero? act-budget))
                     0
                     (* 100 (/ act-used-time act-budget)))]))
@@ -442,7 +457,7 @@
    (->> activities-of-month
         (mapcat vals)
         (group-by (juxt :cat :act))
-        (map (fn [[k activities]] [k (->> activities (map :time) (apply +))]))
+        (map (fn [[k activities]] [k (->> activities (remove :todo?) (map :time) (apply +))]))
         (into {}))))
 
 (comment

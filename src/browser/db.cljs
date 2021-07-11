@@ -39,6 +39,7 @@
 (s/def ::day (s/and number? #(<= 1 % 31))) ; using days from 1 to 31
 (s/def ::id string?)
 
+(s/def ::day-activity-draft (s/keys :req-un [::cat ::act ::time ::year ::month ::day]))
 (s/def ::day-activity (s/keys :req-un [::cat ::act ::time ::year ::month ::day ::id]))
 
 (s/def ::day-map (s/map-of string? ::day-activity))
