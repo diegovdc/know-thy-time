@@ -1,25 +1,36 @@
 {:source-paths ["src"]
+ :jvm-opts ["-Xmx1G"]
  :dependencies [[reagent "1.0.0-alpha2"]
                 [re-frame "1.1.2"]
+                [day8.re-frame/tracing "0.6.2"]
+                [binaryage/devtools "1.0.2"]
+                [day8.re-frame/re-frame-10x "1.0.2"]
                 [metosin/reitit "0.5.10"]]
 
  :dev-http {5000 "build/browser"}
  :nrepl {:port 8777}
 
  :builds
-  ; https://shadow-cljs.github.io/docs/UsersGuide.html#target-node-script
+                                        ; https://shadow-cljs.github.io/docs/UsersGuide.html#target-node-script
  {:app {:target :node-script
         :output-to "build/node-app.js"
         :main server.main/-main
         :devtools {:after-load server.main/reload!}}
-  ; https://shadow-cljs.github.io/docs/UsersGuide.html#target-node-library
+                                        ; https://shadow-cljs.github.io/docs/UsersGuide.html#target-node-library
   :library {:target :node-library
             :output-to "build/lib.js"
             :exports {:handler library.main/handler}}
-  ; https://shadow-cljs.github.io/docs/UsersGuide.html#target-browser
+                                        ; https://shadow-cljs.github.io/docs/UsersGuide.html#target-browser
   :browser {:target :browser
             :output-dir "build/browser"
             :asset-path "."
             :modules {:browser-main {:entries [browser.main]
-                                     :init-fn browser.main/init}}
-            :build-hooks [(_build_hooks.browser/copy-index)]}}}
+                                     :init-fn browser.main/init
+                                     :preloads [devtools.preload
+                                                day8.re-frame-10x.preload]}}
+            :dev {:compiler-options {:closure-defines {re-frame.trace.trace-enabled? true
+                                                       day8.re-frame.tracing.trace-enabled? true}}}
+            :build-hooks [(_build_hooks.browser/copy-index)]
+            :release {:build-options
+                      {:ns-aliases
+                       {day8.re-frame.tracing day8.re-frame.tracing-stubs}}}}}}

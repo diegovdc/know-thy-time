@@ -24,15 +24,6 @@
 
 ;; -- Domino 1 - Event Dispatch -----------------------------------------------
 
-(defn dispatch-timer-event
-  []
-  (let [now (js/Date.)]
-    (rf/dispatch [:timer now])))  ;; <-- dispatch used
-
-;; Call the dispatching function every second.
-;; `defonce` is like `def` but it ensures only one instance is ever
-;; created in the face of figwheel hot-reloading of this file.
-(defonce do-timer (js/setInterval dispatch-timer-event 1000))
 
 
 ;; -- Domino 2 - Event Handlers -----------------------------------------------
@@ -42,23 +33,16 @@
  (fn [_ _] ;; the two parameters are not important here, so use _
    (db/initialize-db)))    ;; so the application state will initially be a map with two keys
 
-(rf/reg-event-db ;; usage:  (dispatch [:time-color-change 34562])
- :time-color-change ;; dispatched when the user enters a new colour into the UI text field
- (fn [db [_ new-color-value]] ;; -db event handlers given 2 parameters:  current application state and event (a vector)
-   (assoc db :time-color new-color-value)))   ;; compute and return the new application state
-
-
-(rf/reg-event-db                 ;; usage:  (dispatch [:timer a-js-Date])
- :timer                         ;; every second an event of this kind will be dispatched
- (fn [db [_ new-time]]          ;; note how the 2nd parameter is destructured to obtain the data value
-   (assoc db :time new-time)))
 
 (rf/reg-event-db
  :router
  (fn [db [_ router]]
    (assoc db :router router)))
 
+(rf/reg-event-db :hide-privacy-wall (fn [db _] (assoc db :show-privacy-wall? false)))
+
 (rf/reg-event-db :set-year (fn [db [_ year]] (assoc db :year year)))
+
 (rf/reg-event-db :set-month (fn [db [_ year]] (assoc db :month year)))
 
 (rf/reg-event-fx
@@ -68,12 +52,6 @@
     :fx [[:save-categories]
          [:save-activities]
          [:save-fixed-time]]}))
-
-;; TODO use update category to instanciate a new category config for each month
-;; Look for previous config if not and use that as a basis for the new config
-;; else use the default config
-
-
 
 (rf/reg-event-fx
  :create-category
@@ -218,6 +196,7 @@
 ;; -- Domino 4 - Query  -------------------------------------------------------
 (rf/reg-sub :db (fn  [db _] db))
 
+
 (rf/reg-sub
  :backup
  (fn [{:keys [version activities categories fixed-time]} _]
@@ -279,25 +258,146 @@
 (rf/reg-sub :available-hours-in-month
             :<- [:available-hours]
             :<- [:days-in-month]
-            (fn [[fixed-time days-in-month] _]
+            (fn [[fixed-time days-in-month] [_ query]]
+              (println query)
               (* fixed-time days-in-month)))
 
 (comment @(rf/subscribe [:days-in-month])
          @(rf/subscribe [:available-hours])
+         @(rf/subscribe [:year-month])
+         @(rf/subscribe [:activities-of-month [2021 3]])
          @(rf/subscribe [:available-hours-in-month]))
 
 (rf/reg-sub :activities-of-month
             :<- [:activities]
-            :<- [:year]
-            :<- [:month]
-            (fn [[activities year month] _]
-              (-> activities (get-in [year month]) vals)))
+            :<- [:year-month]
+            (fn [[activities year-month] [_ year-month*]]
+              (-> activities (get-in (or year-month* year-month)) vals)))
 
 (rf/reg-sub :month-categories
             :<- [::categories/current-month-categories]
             :<- [::categories/current-configured-month]
             (fn [[categories year-month] _]
               (->> categories (map (fn [[cat val]] [cat (get val year-month)])) (into {}))))
+
+(rf/reg-sub :show-privacy-wall? (fn [db _] (:show-privacy-wall? db)))
+
+(defn make-year-month-combos [years months]
+  (mapcat (fn [y] (map (fn [m] [y m]) months))  years))
+
+(defn make-year-month-range [[year-1 month-1] [year-2 month-2]]
+  (let [inter-years (range (inc year-1) year-2)
+        inter-years-combos (make-year-month-combos inter-years (range 0 12))
+        year-1-months (if (= year-1 year-2)
+                        (range month-1 (inc month-2))
+                        (range month-1 12))
+        year-2-months (if (= year-1 year-2) [] (range 0 (inc month-2)))
+        year-1-combos (make-year-month-combos [year-1] year-1-months)
+        year-2-combos (make-year-month-combos [year-2] year-2-months)
+        range (->> (concat year-1-combos inter-years-combos year-2-combos)
+                   (sort-by (juxt first second)))]
+    range))
+
+(rf/reg-sub :all-months-range
+            :<- [:activities]
+            (fn [acts]
+              (let [initial-year (-> acts first first)
+                    initial-month (-> acts first second first first)]
+                (make-year-month-range
+                 [initial-year
+                  initial-month]
+                 [(d/getYear (js/Date.))
+                  (d/getMonth (js/Date.))]))))
+
+(-> @(rf/subscribe [:activities])
+    (get-in [2021 0])
+    vals)
+(defn spy [x] (println x) x)
+(do
+  (defn activities-time-in-range
+    [activities [_ [year-1 month-1] [year-2 month-2]]]
+    (let [range (make-year-month-range [year-1 month-1] [year-2 month-2])]
+      (map (fn [year-month]
+             [year-month
+              (-> activities
+                  (get-in year-month)
+                  vals
+                  (->> (mapcat vals)
+                       (group-by :act)
+                       (mapcat (fn [[name acts]]
+                                 {[(-> acts first :cat) name] (->> acts (map :time) (apply +))}))
+                       (into {})))])
+           range)))
+  (activities-time-in-range @(rf/subscribe [:activities]) [nil [2021 0] [2024 2]]))
+(rf/reg-sub :activities-time-in-range
+            :<- [:activities]
+            activities-time-in-range)
+
+(rf/reg-sub :activity-names-by-category
+            :<- [:categories]
+            (fn [categories _]
+              (->> categories
+                   (map (fn [[cat data]]
+                          [cat (-> data :default :activities keys sort)]))
+                   (into {}))))
+(rf/reg-sub :category-activity-pairs
+            :<- [:categories]
+            (fn [categories _]
+              (->> categories
+                   (mapcat (fn [[cat data]]
+                          (->> data :default :activities keys sort
+                               (map (fn [act] [cat act]))))))))
+
+(defn activities-histogram
+  [[activities category-activity-pairs categories-colors]
+   [_ [year-1 month-1] [year-2 month-2] {:keys [acts-to-show-on-render]
+                                         :or {acts-to-show-on-render 5} }]]
+  (let [activities-time (activities-time-in-range activities
+                                                  [nil
+                                                   [year-1 month-1]
+                                                   [year-2 month-2]])
+        labels (map (comp (partial apply utils/fmt-ym-date) first)
+                    activities-time)
+        datasets (->> activities-time
+                      (mapcat (fn [[_ month-act-data]]
+                                (map (fn [cat-act]
+                                       [cat-act (get month-act-data cat-act 0)])
+                                     category-activity-pairs)))
+                      (group-by first)
+                      (map (fn [[[cat act] acts]]
+                             (let [data (map second acts)]
+                               {:label (utils/fmt-str "%s (%s)" act cat)
+                                :data data
+                                :total-hrs (apply + data)
+                                :borderColor (-> cat categories-colors
+                                                 utils/get-color-string)
+                                :backgroundColor (-> cat categories-colors
+                                                     (assoc "a" 0.2)
+                                                     utils/get-color-string)
+                                })))
+                      (sort-by (comp (partial * -1) :total-hrs))
+                      (map-indexed
+                       (fn [i el]
+                         (assoc el :hidden (> i acts-to-show-on-render)))))]
+    (js/console.log datasets)
+    {:labels labels
+     :datasets datasets}))
+(comment
+  (activities-histogram [@(rf/subscribe [:activities])
+                         @(rf/subscribe [:category-activity-pairs])
+                         @(rf/subscribe [:categories-colors])
+                         ]
+                        [nil [2021 0] [2021 5]] ))
+(rf/reg-sub :activities-histogram
+            :<- [:activities]
+            :<- [:category-activity-pairs]
+            :<- [:categories-colors]
+            activities-histogram)
+
+
+(comment
+  @(rf/subscribe [:activities-in-range [2021 0] [2024 2]]))
+
 (rf/reg-sub
  ;; Completed percentage of time for each activity grouped by category
  :time-by-activities-of-month-by-cat
@@ -308,7 +408,9 @@
          (fn [cat [act act-data]]
            (let [act-budget (get-in month-categories [cat :activities act :hrs])
                  act-used-time (->> act-data (map :time) (apply +))]
-             [act (* 100 (/ act-used-time act-budget))]))
+             [act (if (or (nil? act-budget) (zero? act-budget))
+                    0
+                    (* 100 (/ act-used-time act-budget)))]))
 
          add-missing-activities
          (fn [cat exercised-acts]
@@ -350,7 +452,6 @@
   @(rf/subscribe [::categories/current-month-categories])
   @(rf/subscribe [:time-by-activities-of-month-by-cat]))
 
-
 (rf/reg-sub
  :monthly-activities-graph-data
  :<- [:month-categories]
@@ -368,16 +469,17 @@
          tooltip-labels
          (->> acts-time-by-cat
               (mapcat (fn [[cat-name acts]]
-                        (map (fn [[act _percentage]]
+                        (map (fn [[act percentage]]
                                (let [total-hours (get hours-per-activity
                                                       [cat-name act] 0)
                                      estimated-hours (get-in
                                                       cats
                                                       [cat-name :activities act :hrs]
                                                       0)]
-                                 (gstr/format "%s/%s hrs"
+                                 (gstr/format "%s/%s hrs (%s)"
                                               (utils/format-float total-hours)
-                                              (utils/format-float estimated-hours))))
+                                              (utils/format-float estimated-hours)
+                                              (utils/percentage-string percentage))))
                              acts))))
 
          background-colors
@@ -399,33 +501,6 @@
                   :borderWidth 1}]})))
 
 
-;; -- Domino 5 - View Functions ----------------------------------------------
-
-(defn clock
-  []
-  [:div.example-clock
-   {:style {:color @(rf/subscribe [:time-color])}}
-   (-> @(rf/subscribe [:time])
-       .toTimeString
-       (str/split " ")
-       first)])
-
-(defn color-input
-  []
-  [:div.color-input
-   "Time color: "
-   [:input {:type "text"
-            :value @(rf/subscribe [:time-color])
-            :on-change #(rf/dispatch [:time-color-change (-> % .-target .-value)])}]])  ;; <---
-
-(defn ui
-  []
-  [:div
-   #_[:h1 "Hello world, it is now"]
-   #_[clock]
-   #_[color-input]
-   (budget/main)
-   (month/main)])
 
 ;; -- Entry Point -------------------------------------------------------------
 (defn focus-current-month
@@ -435,21 +510,44 @@
     (.focus (js/document.getElementById "Current month"))))
 
 
+(defn db-and-edn-data-have-diverged?
+  "Returns `true` if the current in-memory state of the window has diverged from
+  the backed-up in-disk edn data"
+  []
+  (-> @(rf/subscribe [:db])
+      (select-keys [:fixed-time :categories :activities])
+      (not= {:fixed-time (db-init/get-fixed-time)
+             :categories (db-init/get-categories)
+             :activities (db-init/get-activities)})))
+
+(defn reload-data-from-backup
+  "Used to reinitialize the app so that data is kept in sync between different windows"
+  [_ev]
+  (when (db-and-edn-data-have-diverged?)
+    (rf/dispatch [:initialize])
+    (router/start-app!)))
+
+(defn hide-privacy-wall [ev]
+  (when @(rf/subscribe [:show-privacy-wall?])
+    (rf/dispatch [:hide-privacy-wall])))
+
 (defn init []
   (rf/clear-subscription-cache!)
   (rf/dispatch-sync [:initialize])
   (router/start-app!)
   (js/window.addEventListener "keyup" focus-current-month)
+  (js/window.addEventListener "keyup"  hide-privacy-wall)
+  (js/window.addEventListener "click"  hide-privacy-wall)
   ;; Reinitialize database on window focus, so that different tabs are kept in sync
-  (js/window.addEventListener "focus" #(do (rf/dispatch-sync [:initialize])
-                                           (router/start-app!))))
+  (js/window.addEventListener "focus" reload-data-from-backup))
+
 
 (comment
   (rf/dispatch-sync [:initialize]))
 (defn ^:dev/after-load clear-cache-and-render!
   []
   ;; The `:dev/after-load` metadata causes this function to be called
-  ;; after shadow-cljs hot-reloads code. We force a UI update by clearing
+  ;; after shadow-cljs hot-reloads code. We force a UI qupdate by clearing
   ;; the Reframe subscription cache.
   (rf/clear-subscription-cache!)
   (js/window.removeEventListener "keyup" focus-current-month)

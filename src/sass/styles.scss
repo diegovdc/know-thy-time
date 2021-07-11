@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Titillium+Web&display=swap");
+
 @mixin delete-btn {
   & .delete-btn {
     opacity: 0;
@@ -24,8 +26,9 @@ body {
 }
 
 body {
-  padding: 0 20px;
+  padding: 40px 20px 0;
   min-height: 200vh;
+  font-family: "Titillium Web", sans-serif;
 }
 
 .form-width {
@@ -41,6 +44,37 @@ body {
   transform: translate(-50%, -50%);
 }
 
+.privacy-wall {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  z-index: 9999;
+  background-color: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  h1 {
+    margin-bottom: 0;
+    line-height: 1;
+    font-size: 80px;
+    position: relative;
+    top: -20px;
+    opacity: 0.6;
+  }
+}
+
+.menu {
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+  z-index: 999;
+  background-color: black;
+}
+
 .main-view {
   &__container {
     display: flex;
@@ -52,7 +86,7 @@ body {
   }
   &__budget {
     position: sticky;
-    top: 0;
+    top: 40px;
     height: 100vh;
     overflow: scroll;
     &::-webkit-scrollbar {
@@ -64,6 +98,15 @@ body {
     &-container {
       max-width: 945px;
       width: 100%;
+    }
+    .accordion,
+    .card,
+    .card-header {
+      background-color: black;
+    }
+    .card-header {
+      padding: 0;
+      border: 1px solid white;
     }
   }
 }
@@ -158,5 +201,25 @@ body {
   }
   &__button {
     cursor: pointer;
+  }
+}
+
+.histogram-controls {
+  position: absolute;
+  width: 100%;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-top: 1px;
+  justify-content: space-around;
+  background-color: #000000ab;
+  opacity: 0.1;
+  transition: opacity 0.3s ease;
+  &:hover {
+    opacity: 1;
+  }
+  & input {
+    width: 50px;
+    margin: 0 5px;
   }
 }

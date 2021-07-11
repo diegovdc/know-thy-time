@@ -3,7 +3,12 @@
             [goog.string.format]
             ["react-bootstrap" :as rb]
             [clojure.string :as str]
-            [react-bootstrap-icons :as icons]))
+            [react-bootstrap-icons :as icons]
+            [date-fns :as d]))
+
+(def fmt-str gstr/format)
+
+(defn fmt-ym-date [y m] (d/format (js/Date. y m) "MMM Y"))
 
 (defn get-category-value [year-month category]
   ;; FIXME convert into a subscription

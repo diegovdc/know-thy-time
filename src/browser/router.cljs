@@ -126,18 +126,26 @@
                :text "Previous month"
                :params (dutils/prev-month year month)}
               {:route-name ::routes/home}
-              {:route-name ::routes/categories}
-              {:route-name ::routes/fixed-time}
               {:route-name ::routes/calendar
                :text "Next month"
-               :params (dutils/next-month year month)}])
+               :params (dutils/next-month year month)}
+              {:route-name ::routes/categories}
+              {:route-name ::routes/fixed-time}
+              {:route-name ::routes/histogram}])
         ]
-    [:ul {:class "d-flex justify-content-around"} routes (backup-link) (restore-button)]))
+    [:ul {:class "d-flex justify-content-around menu"} routes (backup-link) (restore-button)]))
+
+
+(defn privacy-wall []
+  (when  @(re-frame/subscribe [:show-privacy-wall?])
+    [:div {:class "privacy-wall"}
+     [:h1 "Know thy time"]]))
 
 (defn router-component [{:keys [router]}]
   (let [current-route @(re-frame/subscribe [::current-route])]
     [:div
      (alert/main)
+     (privacy-wall)
      [nav {:router router :current-route current-route}]
      (when current-route
        [(-> current-route :data :view)])]))
