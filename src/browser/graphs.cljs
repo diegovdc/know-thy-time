@@ -3,15 +3,16 @@
             [re-frame.core :as rf]
             [browser.utils :as utils]))
 
-(defn bars [title data & {:keys [chart-height]}]
+(defn bars [title data & {:keys [chart-height options]}]
   [:div {:style {:background-color "white"
                  :width "100%"}}
    title
    [:> Bar {:data data
             :height chart-height
-            :options {:legend {:labels {:boxWidth 0}}
-                      :scales {:yAxes [{:ticks {:beginAtZero true
-                                                :suggestedMax 100}}]}}}]])
+            :options (merge {:legend {:labels {:boxWidth 0}}
+                             :scales {:yAxes [{:ticks {:beginAtZero true
+                                                       :suggestedMax 100}}]}}
+                            options)}]])
 
 (defn pie [title data & {:keys [options]}]
   [:div {:style {:width "100%"}}

@@ -1,16 +1,23 @@
 (ns browser.main
   (:require [browser.budget :as budget]
-            [browser.month :as month]
-            [browser.router :as router]
             [browser.db :as db]
             [browser.db.init :as db-init]
+            [browser.month :as month]
+            [browser.router :as router]
+            [browser.utils :as utils]
+            [goog.string :as gstr]
+            [goog.string.format]
+            [browser.views.categories
+             :as
+             categories
+             :refer
+             [ensure-category-configs-exist-in-month]]
+            [clojure.set :as set]
             [clojure.spec.alpha :as s]
             [clojure.string :as str]
-            [re-frame.core :as rf]
             [clojure.walk :as walk]
-            [browser.utils :as utils]
-            [clojure.set :as set]))
-
+            ["date-fns" :as d]
+            [re-frame.core :as rf]))
 
 ;; A detailed walk-through of this source code is provided in the docs:
 ;; https://day8.github.io/re-frame/dominoes-live/
@@ -26,17 +33,6 @@
 ;; `defonce` is like `def` but it ensures only one instance is ever
 ;; created in the face of figwheel hot-reloading of this file.
 (defonce do-timer (js/setInterval dispatch-timer-event 1000))
-
-(def categories
-  {"Trabajo" {:default {:percentage 30
-                        :activities {"Fundamentally" {:hrs 80}}}}
-   "Musica" {:default {:percentage 30
-                       :activities {"Taller Abierto" {:hrs 30}}}}
-   "Techxploration" {:default {:percentage 15
-                               :activities {"Budgetime" {:hrs 30}}}}
-   "Otros" {:default {:percentage 15
-                      :activities {"Inversiones" {:hrs 8}}}}
-   "Libre" {:default {:percentage 10}}})
 
 
 ;; -- Domino 2 - Event Handlers -----------------------------------------------
@@ -73,26 +69,55 @@
          [:save-activities]
          [:save-fixed-time]]}))
 
+;; TODO use update category to instanciate a new category config for each month
+;; Look for previous config if not and use that as a basis for the new config
+;; else use the default config
+
+
+
 (rf/reg-event-fx
  :create-category
  (fn [{:keys [db]} [_ category-name]]
 
-   {:db (if (empty? category-name)
-          (assoc db :alert {:variant "danger" :msg "The category must have a name"})
-          (assoc-in db [:categories category-name :default]
-                    {:percentage 0
-                     :color {"r" (rand-int 255)
-                             "g" (rand-int 255)
-                             "b" (rand-int 255)
-                             "a" 1}
-                     :activities {}}))
+   {:db (let [new-cat {:percentage 0
+                       :color {"r" (rand-int 255)
+                               "g" (rand-int 255)
+                               "b" (rand-int 255)
+                               "a" 1}
+                       :activities {}}
+              year (:year db)
+              month (:month db)]
+          (cond
+            (empty? category-name)
+            (assoc db :alert
+                   {:variant "danger"
+                    :msg "The category must have a name"})
+
+            (-> db :categories (get category-name))
+            (assoc db :alert
+                   {:variant "danger"
+                    :msg "The category already exists"})
+
+            :else
+            (-> db
+                ensure-category-configs-exist-in-month
+                (assoc-in [:categories category-name :default] new-cat)
+                (assoc-in [:categories category-name [year month]] new-cat))))
     :fx (if (empty? category-name) []
             [[:save-categories]])}))
+(ensure-category-configs-exist-in-month
+ {:categories {"cat-a" {:default {:a :b}
+                        [2020 12] {}
+                        [2021 2] {:c :d}}}
+  :year 2020
+  :month 1})
 
 (rf/reg-event-fx
  :update-category
  (fn [{:keys [db]} [_ values-path value]]
-   {:db (assoc-in db (concat [:categories] values-path) value)
+   {:db (-> db
+            ensure-category-configs-exist-in-month
+            (assoc-in (concat [:categories] values-path) value))
     :fx [[:save-categories]]}))
 
 (defn remove-activities-of-category [activities category-name]
@@ -117,7 +142,18 @@
 (rf/reg-event-fx
  :create-category-activity
  (fn [{:keys [db]} [_ values-path value]]
-   {:db (assoc-in db (concat [:categories] values-path) value)
+   {:db (cond
+          (empty? (last values-path))
+          (assoc db :alert
+                 {:variant "danger"
+                  :msg "The activity  must have a name"})
+
+          (-> db (get-in (concat [:categories] values-path)))
+          (assoc db :alert
+                 {:variant "danger"
+                  :msg "The activity already exists"})
+
+          :else (assoc-in db (concat [:categories] values-path) value))
     :fx [[:save-categories]]}))
 
 (rf/reg-event-fx
@@ -126,6 +162,7 @@
    {:db (update-in db (concat [:categories] values-path) dissoc activity-name)
     :fx [[:save-categories]]}))
 
+;; Daily activities
 (rf/reg-event-fx
  :create-activity
  (fn [{:keys [db]} [_ {:keys [year month day id] :as activity}]]
@@ -158,6 +195,7 @@
 
 (rf/reg-event-fx
  :close-alert
+
  (fn [{:keys [db]} [_]]
    {:db (assoc db :alert db-init/initial-alert)}))
 
@@ -178,6 +216,8 @@
 
 
 ;; -- Domino 4 - Query  -------------------------------------------------------
+(rf/reg-sub :db (fn  [db _] db))
+
 (rf/reg-sub
  :backup
  (fn [{:keys [version activities categories fixed-time]} _]
@@ -185,6 +225,7 @@
             :activities activities
             :categories categories
             :fixed-time fixed-time})))
+
 (rf/reg-sub
  :backup-json
  (fn [{:keys [version activities categories fixed-time]} _]
@@ -192,9 +233,12 @@
                                 :activities activities
                                 :categories categories
                                 :fixed-time fixed-time}))))
+
 (comment
+  (:year @(rf/subscribe [:db]))
   @(rf/subscribe [:backup])
   @(rf/subscribe [:backup-json]))
+
 (rf/reg-sub
  :time
  (fn [db _] ;; db is current app state. 2nd unused param is query vector
@@ -211,55 +255,36 @@
 (rf/reg-sub :activities (fn [db _] (:activities db)))
 (rf/reg-sub :month (fn [db _] (:month db)))
 (rf/reg-sub :year (fn [db _] (:year db)))
+(rf/reg-sub :year-month
+            :<- [:year]
+            :<- [:month]
+            (fn [[year month] _] [year month]))
+
 (rf/reg-sub :categories-colors
             (fn [db _] (->> (:categories db)
                            (map (fn [[cat data]]
                                   [cat (->> data :default :color)]))
                            (into {}))))
 
-(rf/reg-sub
- :monthly-categories-graph-data
- :<- [:categories]
- :<- [:activities]
- :<- [:year]
- :<- [:month]
- :<- [:free-time]
- (fn [[categories activities year month {:keys [month-free-time]}] _]
-   (let [cats (->> categories
-                   (map (fn [[cat val]] [cat (:default val)]))
-                   (into {}))
-         acts (-> activities
-                  (get-in [year month])
-                  vals
-                  (->> (mapcat vals)
-                       (group-by :cat)))
-         cat-data (->> cats
-                       (map (fn [[cat data]]
-                              (let [cat-hours (-> data :percentage
-                                                  (/ 100) (* month-free-time))
-                                    total-hours (apply + (map :time (get acts cat)))]
-                                {:name cat
-                                 :advance (* 100 (/ total-hours cat-hours))
-                                 :total-hours total-hours})))
-                       (sort-by :total-hours)
-                       reverse)
-         data (map (comp #(.toFixed % 2) :advance) cat-data)
-         cat-names (map :name cat-data)
-         background-colors (map #(-> cats (get %)
-                                     :color
-                                     (assoc "a" 0.3)
-                                     utils/get-color-string)
-                                cat-names)
-         border-colors (map #(-> cats (get %)
-                                 :color
-                                 utils/get-color-string)
-                            cat-names)]
-     {:labels cat-names
-      :datasets [{:label "Advanced %"
-                  :data data
-                  :backgroundColor background-colors
-                  :borderColor border-colors
-                  :borderWidth 1}]})))
+(rf/reg-sub :days-in-month
+            :<- [:year]
+            :<- [:month]
+            (fn [[year month] _] (d/getDaysInMonth (js/Date. year month))))
+
+(rf/reg-sub :available-hours
+            :<- [:fixed-time]
+            (fn [fixed-time _]
+              (- 24 (apply + (vals fixed-time)))))
+
+(rf/reg-sub :available-hours-in-month
+            :<- [:available-hours]
+            :<- [:days-in-month]
+            (fn [[fixed-time days-in-month] _]
+              (* fixed-time days-in-month)))
+
+(comment @(rf/subscribe [:days-in-month])
+         @(rf/subscribe [:available-hours])
+         @(rf/subscribe [:available-hours-in-month]))
 
 (rf/reg-sub :activities-of-month
             :<- [:activities]
@@ -269,10 +294,12 @@
               (-> activities (get-in [year month]) vals)))
 
 (rf/reg-sub :month-categories
-            :<- [:categories]
-            (fn [categories _]
-              (->> categories (map (fn [[cat val]] [cat (:default val)])) (into {}))))
+            :<- [::categories/current-month-categories]
+            :<- [::categories/current-configured-month]
+            (fn [[categories year-month] _]
+              (->> categories (map (fn [[cat val]] [cat (get val year-month)])) (into {}))))
 (rf/reg-sub
+ ;; Completed percentage of time for each activity grouped by category
  :time-by-activities-of-month-by-cat
  :<- [:activities-of-month]
  :<- [:month-categories]
@@ -306,21 +333,52 @@
           (sort-by (comp (partial apply +) (partial map second) second))
           reverse))))
 
+(rf/reg-sub
+ :total-hours-per-activity-of-month
+ :<- [:activities-of-month]
+ (fn [activities-of-month _]
+   (->> activities-of-month
+        (mapcat vals)
+        (group-by (juxt :cat :act))
+        (map (fn [[k activities]] [k (->> activities (map :time) (apply +))]))
+        (into {}))))
+
+(comment
+  @(rf/subscribe [::categories/monthly-categories-graph-data])
+  @(rf/subscribe [:activities-of-month])
+  @(rf/subscribe [:month-categories])
+  @(rf/subscribe [::categories/current-month-categories])
+  @(rf/subscribe [:time-by-activities-of-month-by-cat]))
 
 
 (rf/reg-sub
  :monthly-activities-graph-data
- :<- [:categories]
+ :<- [:month-categories]
  :<- [:time-by-activities-of-month-by-cat]
- (fn [[categories acts-time-by-cat] _]
-   (let [cats (->> categories (map (fn [[cat val]] [cat (:default val)])) (into {}))
-         labels (->> acts-time-by-cat (mapcat second) (map first))
+ :<- [:total-hours-per-activity-of-month]
+ (fn [[cats acts-time-by-cat hours-per-activity] _]
+   (let [labels (->> acts-time-by-cat (mapcat second) (map first))
          data (->> acts-time-by-cat (mapcat second) (map (comp #(.toFixed % 2) second)))
 
          colors-with-repeats
          (->> acts-time-by-cat
               (map (juxt (comp count second)
                          (comp :color (partial get cats) first))))
+
+         tooltip-labels
+         (->> acts-time-by-cat
+              (mapcat (fn [[cat-name acts]]
+                        (map (fn [[act _percentage]]
+                               (let [total-hours (get hours-per-activity
+                                                      [cat-name act] 0)
+                                     estimated-hours (get-in
+                                                      cats
+                                                      [cat-name :activities act :hrs]
+                                                      0)]
+                                 (gstr/format "%s/%s hrs"
+                                              (utils/format-float total-hours)
+                                              (utils/format-float estimated-hours))))
+                             acts))))
 
          background-colors
          (mapcat (fn [[n color]]
@@ -336,6 +394,7 @@
       :datasets [{:label "Exercised activities %"
                   :data data
                   :backgroundColor background-colors
+                  :tooltipLabels tooltip-labels
                   :borderColor border-colors
                   :borderWidth 1}]})))
 
@@ -369,7 +428,9 @@
    (month/main)])
 
 ;; -- Entry Point -------------------------------------------------------------
-(defn focus-current-month [ev]
+(defn focus-current-month
+  "alt+m to focus the current month menu item"
+  [ev]
   (when (and (.-altKey ev) (= 77 (.-keyCode ev)))
     (.focus (js/document.getElementById "Current month"))))
 
@@ -378,8 +439,13 @@
   (rf/clear-subscription-cache!)
   (rf/dispatch-sync [:initialize])
   (router/start-app!)
-  (js/window.addEventListener "keyup" focus-current-month))
+  (js/window.addEventListener "keyup" focus-current-month)
+  ;; Reinitialize database on window focus, so that different tabs are kept in sync
+  (js/window.addEventListener "focus" #(do (rf/dispatch-sync [:initialize])
+                                           (router/start-app!))))
 
+(comment
+  (rf/dispatch-sync [:initialize]))
 (defn ^:dev/after-load clear-cache-and-render!
   []
   ;; The `:dev/after-load` metadata causes this function to be called

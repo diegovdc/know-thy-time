@@ -3,7 +3,7 @@
             [browser.views.main :as views]
             [browser.views.categories :as categories]
             [browser.views.fixed-time :as fixed-time]
-            [date-fns :as d]))
+            ["date-fns" :as d]))
 
 
 
@@ -64,7 +64,6 @@
      :controllers
      [{:parameters {:path [:year :month]}
        :start (fn [& params]
-                (println (-> params first :path :year))
                 (rf/dispatch [:set-year (-> params first :path :year int)])
                 (rf/dispatch [:set-month (-> params first :path :month int)]))
        :stop  (fn [& params] (js/console.log "Leaving sub-page 1"))}]}]])
