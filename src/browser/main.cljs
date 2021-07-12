@@ -150,8 +150,10 @@
 
 (rf/reg-event-fx
  :edit-activity
- (fn [{:keys [db]} [_ {:keys [year month day id] :as activity}]]
-   {:db (assoc-in db [:activities year month day id] activity)
+ (fn [{:keys [db]} [_ {:keys [year month day id original-day] :as activity}]]
+   {:db (-> db
+            (update-in [:activities year month original-day] dissoc id)
+            (assoc-in  [:activities year month day id] (dissoc activity :original-day)))
     :fx [[:save-activities]]}))
 
 (rf/reg-event-fx

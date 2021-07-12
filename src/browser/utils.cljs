@@ -96,7 +96,9 @@
     [:> rb/Button {:variant btn-variant
                    :on-click on-click} btn-text]]])
 
-(defn select [label value on-change options]
+(defn select
+  "`options` is [[:option {:key key :value value} label]]"
+  [label value on-change options]
   [:> rb/Form.Group {:control-id label}
    [:> rb/Form.Label label]
    [:> rb/Form.Control

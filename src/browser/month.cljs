@@ -19,7 +19,7 @@
         (range 1 (inc (d/getDaysInMonth (js/Date. year month ))))))
 
 (defonce create-activity (r/atom nil))
-(def edit-activity-modal-state (r/atom {::show? false}))
+(defonce edit-activity-modal-state (r/atom nil))
 (defonce new-activity (r/atom {}))
 
 (defonce show-activities (r/atom {}))
@@ -54,12 +54,11 @@
 
                      [:span {:class "ml-2 month__activity_delete"}
                       (utils/edit-btn #(reset! edit-activity-modal-state
-                                               (assoc activity ::show? true)))]
+                                               (assoc activity
+                                                      :original-day (activity :day))))]
 
                      [:span {:class "ml-2 month__activity_delete"}
-                      (utils/delete-btn #(do
-                                           (println activity)
-                                           (rf/dispatch [:delete-activity activity])))]]
+                      (utils/delete-btn #(rf/dispatch [:delete-activity activity]))]]
 
                     [:p {:style {:max-width 200}}
                      [:small cat (when description (str ": " description))]]]]))))
@@ -75,7 +74,7 @@
 
 (defn daily-activity-data [activities]
   (let [activity-time (->>  activities
-                             set-todos-category
+                            set-todos-category
                             (group-by :cat)
                             (map (fn [[cat data]]
                                    (when cat
@@ -152,10 +151,11 @@
         on-todo-change #(swap! activity-atom assoc :todo? %)
         ;; results
         resulting-activity (-> @activity-atom
-                             (dissoc ::show?)
-                             (merge {:year year
-                                     :month month
-                                     :day day}))]
+                               (dissoc ::show?)
+                               (merge {:year year
+                                       :month month
+                                       :day (or (@activity-atom :day)
+                                                day)}))]
     (when show?
       (js/console.debug "validation" (s/explain-str spec resulting-activity))
       [:> rb/Form {:class "form-width"}
@@ -190,6 +190,25 @@
 
 
 (defn close-modal [] (reset! edit-activity-modal-state {}))
+
+(defn edit-activity-modal [dates]
+  (utils/modal "Edit activity"
+               (when (seq @edit-activity-modal-state)
+                 [:div {:class "form-width"}
+                  (utils/select "Date" (@edit-activity-modal-state :day)
+                                #(swap! edit-activity-modal-state
+                                        assoc
+                                        :day (utils/get-input-number %))
+                                (map (fn [{day-name :name  day :day}]
+                                       [:option {:key day :value day} day-name])
+                                     dates))
+                  (render-activity-form :edit-activity
+                                        ::db/day-activity
+                                        edit-activity-modal-state
+                                        10
+                                        true)])
+               (seq @edit-activity-modal-state)
+               close-modal))
 (defn main []
   (r/create-class
    {:component-did-mount
@@ -206,17 +225,11 @@
             year @(rf/subscribe [:year])
             month @(rf/subscribe [:month])
             dates (days month year)]
+
         (when (and year month)
           [:div
            [:h1 (d/format (js/Date. year month ) "MMM Y")]
-           (utils/modal "Edit activity"
-                        (render-activity-form :edit-activity
-                                              ::db/day-activity
-                                              edit-activity-modal-state
-                                              10
-                                              true)
-                        (::show? @edit-activity-modal-state)
-                        close-modal)
+           (edit-activity-modal dates)
            [:div
             (doall
              (map (fn [{day-name :name  day :day}]
