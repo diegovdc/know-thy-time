@@ -70,7 +70,7 @@
    [:> rb/Form.Label label]
    [:> rb/Form.Control
     {:type type
-     :value value
+     :defaultValue value
      :step (or step 1)
      :placeholder placeholder
      :on-change on-change}]])

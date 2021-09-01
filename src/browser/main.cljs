@@ -39,6 +39,9 @@
  (fn [db [_ router]]
    (assoc db :router router)))
 
+(comment
+  (-> @(rf/subscribe [:db]) :categories (get "Self-kindness"))
+  )
 (rf/reg-event-db :hide-privacy-wall (fn [db _] (assoc db :show-privacy-wall? false)))
 
 (rf/reg-event-db :set-year (fn [db [_ year]] (assoc db :year year)))
@@ -96,6 +99,17 @@
    {:db (-> db
             ensure-category-configs-exist-in-month
             (assoc-in (concat [:categories] values-path) value))
+    :fx [[:save-categories]]}))
+
+(rf/reg-event-fx
+ :update-category-color
+ (fn [{:keys [db]} [_ category color]]
+   (println category color)
+   {:db (let [cat (-> db :categories (get category)
+                      (->> (map (fn [[k data]]
+                                  [k (assoc data :color color)]))
+                           (into {})))]
+          (assoc-in db [:categories category] cat))
     :fx [[:save-categories]]}))
 
 (defn remove-activities-of-category [activities category-name]

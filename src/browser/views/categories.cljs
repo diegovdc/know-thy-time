@@ -127,14 +127,23 @@
 (defn toggle-color-picker [category]
   (swap! color-pickers #(assoc % category (not (get % category)))))
 
+(let [color-atom (r/atom {})]
+  (defn color-picker [cat-name color]
+    [:> color/ChromePicker
+     {:color (clj->js (get @color-atom cat-name color))
+      :on-change #(reset! color-atom
+                          {cat-name (-> % js->clj (get "rgb"))})
+      :on-change-complete
+      #(rf/dispatch
+        [:update-category-color cat-name
+         (-> % js->clj (get "rgb") )])}]))
 
 (defn render-category [available-hours-month [cat-name cat-data]]
   (let [year-month @(rf/subscribe [::current-configured-month])
         data (utils/get-category-value year-month cat-data)
         total-hours (/ (* (data :percentage) available-hours-month) 100)
         projected-hours (->> data :activities vals (map :hrs) (apply +))
-        color ( data :color {:r (rand-int 255) :g (rand-int 255) :b (rand-int 255) :a 1})
-        color-string (utils/get-color-string color)]
+        color (data :color {:r (rand-int 255) :g (rand-int 255) :b (rand-int 255) :a 1})]
     [:div {:key cat-name :class "mb-4"}
      [:h2 {:class "categories__title"}
       (cat-input data
@@ -147,14 +156,7 @@
        (utils/render-dot color 20)]
       (utils/delete-btn #(rf/dispatch [:delete-category cat-name]))]
      (when (@color-pickers cat-name)
-       [:> color/ChromePicker {:color (or color color-string)
-                               :on-change #(do
-                                             (println (-> % js->clj (get "rgb") ))
-                                             (rf/dispatch
-                                              ;; FIXME color should be updated for all configs of a category
-                                              [:update-category
-                                               [cat-name :default :color
-                                                (-> % js->clj (get "rgb") )]]))}])
+       (color-picker cat-name color))
      [:p (gstr/format "Total hours: %s, still free hours: %s "
                       (utils/format-float total-hours)
                       (utils/format-float (- total-hours projected-hours)))]
@@ -252,7 +254,7 @@
  :<- [:free-time]
  :<- [::current-configured-month]
  (fn [[categories activities year month {:keys [month-free-time]}
-      current-configured-month] _]
+       current-configured-month] _]
    (let [cats (->> categories
                    (map (fn [[cat val]] [cat (get val current-configured-month)]))
                    (into {}))
