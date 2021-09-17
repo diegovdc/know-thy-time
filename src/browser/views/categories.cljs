@@ -287,8 +287,11 @@
                                  utils/get-color-string)
                             cat-names)
          tooltip-labels (map (fn [{:keys [total-hours estimated-hours]}]
-                               (str (utils/format-float total-hours) "/"
-                                    (utils/format-float estimated-hours) " hrs"))
+                               (utils/fmt-str
+                                "%s/%s hrs (%s%)"
+                                (utils/format-float total-hours)
+                                (utils/format-float estimated-hours)
+                                (utils/format-float (* 100 (/ total-hours estimated-hours)))))
                              cat-data)]
      {:labels cat-names
       :datasets [{:label "Advanced %"
