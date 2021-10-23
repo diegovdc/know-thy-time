@@ -86,6 +86,7 @@
                 (assoc-in [:categories category-name [year month]] new-cat))))
     :fx (if (empty? category-name) []
             [[:save-categories]])}))
+
 (ensure-category-configs-exist-in-month
  {:categories {"cat-a" {:default {:a :b}
                         [2020 12] {}
@@ -145,7 +146,9 @@
                  {:variant "danger"
                   :msg "The activity already exists"})
 
-          :else (assoc-in db (concat [:categories] values-path) value))
+          :else (-> db
+                    ensure-category-configs-exist-in-month
+                    (assoc-in (concat [:categories] values-path) value)))
     :fx [[:save-categories]]}))
 
 (rf/reg-event-fx
@@ -301,14 +304,18 @@
             :<- [:activities]
             :<- [:year-month]
             (fn [[activities year-month] [_ year-month*]]
-              (-> activities (get-in (or year-month* year-month)) vals)))
+              (-> activities
+                  (get-in (or year-month* year-month))
+                  vals)))
 (comment
   (-> @(rf/subscribe [:activities-of-month])))
 (rf/reg-sub :month-categories
             :<- [::categories/current-month-categories]
             :<- [::categories/current-configured-month]
             (fn [[categories year-month] _]
-              (->> categories (map (fn [[cat val]] [cat (get val year-month)])) (into {}))))
+              (->> categories
+                   (map (fn [[cat val]] [cat (get val year-month)]))
+                   (into {}))))
 
 (rf/reg-sub :show-privacy-wall? (fn [db _] (:show-privacy-wall? db)))
 
@@ -371,22 +378,39 @@
                    (map (fn [[cat data]]
                           [cat (-> data :default :activities keys sort)]))
                    (into {}))))
+
+
+(defn get-newest-version-of-category
+  [cat-data]
+  (second (if (> (count cat-data) 1)
+            (first (sort-by first > (dissoc cat-data :default)))
+            (:default cat-data))))
+
+(defn category-activity-pairs [categories _]
+  (->> categories
+       (mapcat (fn [[cat data]]
+                 (->> data
+                      get-newest-version-of-category
+                      :activities keys sort
+                      (map (fn [act] [cat act])))))))
+
+(comment
+  @(rf/subscribe [:categories])
+  (category-activity-pairs @(rf/subscribe [:categories]) nil))
+
 (rf/reg-sub :category-activity-pairs
             :<- [:categories]
-            (fn [categories _]
-              (->> categories
-                   (mapcat (fn [[cat data]]
-                          (->> data :default :activities keys sort
-                               (map (fn [act] [cat act]))))))))
+            category-activity-pairs)
 
 (defn activities-histogram
   [[activities category-activity-pairs categories-colors]
    [_ [year-1 month-1] [year-2 month-2] {:keys [acts-to-show-on-render]
                                          :or {acts-to-show-on-render 5} }]]
-  (let [activities-time (activities-time-in-range activities
-                                                  [nil
-                                                   [year-1 month-1]
-                                                   [year-2 month-2]])
+  (let [activities-time (activities-time-in-range
+                         activities
+                         [nil
+                          [year-1 month-1]
+                          [year-2 month-2]])
         labels (map (comp (partial apply utils/fmt-ym-date) first)
                     activities-time)
         datasets (->> activities-time
@@ -413,7 +437,10 @@
     (js/console.log datasets)
     {:labels labels
      :datasets datasets}))
+
 (comment
+  @(rf/subscribe [:activities])
+  @(rf/subscribe [:category-activity-pairs])
   (activities-histogram [@(rf/subscribe [:activities])
                          @(rf/subscribe [:category-activity-pairs])
                          @(rf/subscribe [:categories-colors])
@@ -531,8 +558,60 @@
                   :borderColor border-colors
                   :borderWidth 1}]})))
 
+(do
+  (defn accumulate-time [acts-by-day days-in-month]
+    (reduce (fn [acc day]
+              (conj acc (->> (acts-by-day day [])
+                             (map :time)
+                             (apply + (or (last acc) 0)))))
+            []
+            (range 1 (inc days-in-month))))
+
+  (defn month-activities-histogram
+    [[acts-of-month days-in-month categories-colors month-category-hours] _]
+    (println "MMMMMMMMM" month-category-hours)
+    (let [time-by-cat (->> acts-of-month
+                           (mapcat vals)
+                           (group-by :cat)
+                           (map (fn [[cat acts]]
+                                  (let [acts-by-day (group-by :day acts)
+                                        time (accumulate-time acts-by-day days-in-month)]
+                                    [cat time]))))
+          labels (range 1 (inc days-in-month))
+          y-max (apply max (mapcat second time-by-cat))
+          datasets (map (fn [[cat hrs]]
+                          (let [data (map (fn [hrs] (* 100 (/ hrs (:estimated-hours (month-category-hours cat))))) hrs)]
+                            {:label cat
+                             :data hrs ;; data
+                             :tooltipLabels (map (fn [perc hrs]
+                                                   (utils/fmt-str "%s% (%shrs)"
+                                                                  (utils/format-float perc)
+                                                                  (utils/format-float hrs)))
+                                                 data hrs)
+                             :borderColor (-> cat categories-colors
+                                              utils/get-color-string)
+                             :backgroundColor (-> cat categories-colors
+                                                  (assoc "a" 0.2)
+                                                  utils/get-color-string)}))
+                        time-by-cat)]
+      {:labels labels
+       :datasets datasets
+       :y-max y-max})))
+
+(comment
+  (month-activities-histogram [@(rf/subscribe [:activities-of-month])
+                               @(rf/subscribe [:days-in-month])
+                               @(rf/subscribe [:categories-colors])
+                               @(rf/subscribe [::categories/month-category-hours])]
+                              nil))
 
 
+(rf/reg-sub :month-activities-histogram-graph-data
+            :<- [:activities-of-month]
+            :<- [:days-in-month]
+            :<- [:categories-colors]
+            :<- [::categories/month-category-hours]
+            month-activities-histogram)
 ;; -- Entry Point -------------------------------------------------------------
 (defn focus-current-month
   "alt+m to focus the current month menu item"
@@ -592,7 +671,7 @@
 (comment
   @(rf/subscribe [:activities])
   (update-in @(rf/subscribe [:activities]) [2021 0 1] dissoc "1ea5d382-e9d4-4d6e-ab1a-4cb53a705d7d")
-  (js/localStorage.setItem "activities" (pr-str {}))
+  (js/localStorage.setItem "categories" (pr-str {}))
   (js/localStorage.setItem "activities"
                            (pr-str {2021 {0 {1 {"1-1" {:cat "Musica"
                                                        :act "Tocar"

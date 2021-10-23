@@ -124,6 +124,7 @@
         month @(rf/subscribe [:month])
         %-of-month  @(rf/subscribe [::elapsed-percentage-of-month])
         cats-graph-data  @(rf/subscribe [::categories/monthly-categories-graph-data])
+        cats-histogram  @(rf/subscribe [:month-activities-histogram-graph-data])
         acts-graph-data @(rf/subscribe [:monthly-activities-graph-data])
         acts-by-cat (->> (get-in acts [year month])
                          vals
@@ -141,15 +142,23 @@
           (utils/fmt-str "(%s elapsed)"
                          (utils/percentage-string %-of-month))]]
         [:div
+         (graphs/line ""
+                      cats-histogram
+                      :chart-height 100
+                      :options {:tooltips
+                                {:callbacks
+                                 {:label get-tooltip-labels}}}
+                      :y-scale-type "linear"
+                      :y-max (max (cats-histogram :y-max) 100))
          (graphs/bars ""
-                      cats-graph-data
-                      :chart-height 65
+                      acts-graph-data
                       :options {:tooltips
                                 {:callbacks
                                  {:label get-tooltip-labels}}})
 
          (graphs/bars ""
-                      acts-graph-data
+                      cats-graph-data
+                      :chart-height 65
                       :options {:tooltips
                                 {:callbacks
                                  {:label get-tooltip-labels}}})]]

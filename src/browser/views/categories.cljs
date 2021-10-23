@@ -50,12 +50,14 @@
   (if ((set (get-cat-config-dates categories)) [current-year current-month])
     categories
     (reduce
-     (fn [cats [cat-name configs]]
-       (assoc-in cats [cat-name [current-year current-month]]
-                 (get configs previous-year-month
-                      ;; Adds `:default` in the case that for some buggy reason
-                      ;; the previous-year-month does not exist in the configs.
-                      (:default configs))))
+     (do
+       (js/console.debug "Creating categories for new month")
+       (fn [cats [cat-name configs]]
+         (assoc-in cats [cat-name [current-year current-month]]
+                   (get configs previous-year-month
+                        ;; Adds `:default` in the case that for some buggy reason
+                        ;; the previous-year-month does not exist in the configs.
+                        (:default configs)))))
      categories
      categories)))
 
@@ -244,39 +246,53 @@
 (defn get-category-color [category]
   (-> @(rf/subscribe [:categories]) (get category) :default :color) )
 (comment @(rf/subscribe [:categories]))
-
+(do
+  (defn month-category-hours [[cats acts year-month {:keys [month-free-time]}] _]
+    (let [acts* (-> acts
+                    (get-in year-month)
+                    vals
+                    (->> (mapcat vals)
+                         (remove :todo?)
+                         (group-by :cat)))]
+      (->> cats
+           (map (fn [[cat data]] [cat (let [perc (:percentage (get data year-month))
+                                           total-hours (apply + (map :time (get acts* cat)))
+                                           estimated-hours (-> perc (/ 100) (* month-free-time))]
+                                       {:category cat
+                                        :percentage perc
+                                        :advance (* 100 (/ total-hours estimated-hours))
+                                        :estimated-hours estimated-hours
+                                        :total-hours total-hours})]))
+           (into {}))))
+  (comment
+    (month-category-hours [@(rf/subscribe [::current-month-categories])
+                           @(rf/subscribe [:activities])
+                           @(rf/subscribe [:year-month])
+                           @(rf/subscribe [:free-time])] nil)))
+(rf/reg-sub
+ ::month-category-hours
+ :<- [::current-month-categories]
+ :<- [:activities]
+ :<- [:year-month]
+ :<- [:free-time]
+ month-category-hours)
+#_@(rf/subscribe [::month-category-hours])
 (rf/reg-sub
  ::monthly-categories-graph-data
  :<- [::current-month-categories]
- :<- [:activities]
- :<- [:year]
- :<- [:month]
- :<- [:free-time]
  :<- [::current-configured-month]
- (fn [[categories activities year month {:keys [month-free-time]}
-       current-configured-month] _]
+ :<- [::month-category-hours]
+ (fn [[categories current-configured-month
+      month-category-hours] _]
    (let [cats (->> categories
                    (map (fn [[cat val]] [cat (get val current-configured-month)]))
                    (into {}))
-         acts (-> activities
-                  (get-in [year month])
-                  vals
-                  (->> (mapcat vals)
-                       (remove :todo?)
-                       (group-by :cat)))
-         cat-data (->> cats
-                       (map (fn [[cat data]]
-                              (let [estimated-hours (-> data :percentage
-                                                        (/ 100) (* month-free-time))
-                                    total-hours (apply + (map :time (get acts cat)))]
-                                {:name cat
-                                 :advance (* 100 (/ total-hours estimated-hours))
-                                 :total-hours total-hours
-                                 :estimated-hours estimated-hours})))
+         cat-data (->> month-category-hours
+                       vals
                        (sort-by :total-hours)
                        reverse)
          data (map (comp #(.toFixed % 2) :advance) cat-data)
-         cat-names (map :name cat-data)
+         cat-names (map :category cat-data)
          background-colors (map #(-> cats (get %)
                                      :color
                                      (assoc "a" 0.3)

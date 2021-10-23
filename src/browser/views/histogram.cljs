@@ -37,7 +37,18 @@
   (-> ev .-target .-value
       (str/split ",")
       (->> (mapv int))))
-(take-while #(not= 5 %) [2 4 5 6])
+
+(comment
+  (let [months @(rf/subscribe [:all-months-range])
+        start-of-range (or (@range* :start) (first months))
+        end-of-range (or (@range* :end) (last months))]
+    (->> @(rf/subscribe [:activities-histogram
+                         start-of-range
+                         end-of-range
+                         {:acts-to-show-on-render @acts-to-show-on-render}])
+         :datasets
+         (map :label)))
+  )
 (defn main []
   (let [months @(rf/subscribe [:all-months-range])
         start-of-range (or (@range* :start) (first months))

@@ -15,7 +15,9 @@
                                                :gridLines {:color "rgba(255,255,255, 0.05)"}}]}}
                             options)}]])
 
-(defn line [title data & {:keys [chart-height options]}]
+(defn line [title data & {:keys [chart-height options y-scale-type y-max]
+                          :or {y-scale-type "logarithmic"
+                               y-max 150}}]
   [:div {:style {:background-color "black"
                  :width "100%"}}
    title
@@ -24,13 +26,10 @@
              :options (merge {:legend {:labels {:boxWidth 0}}
                               :scales {:yAxes [{:ticks {:beginAtZero true
                                                         :min 1
-                                                        :max 150
-                                                        :callback (fn [value index values]
-                                                                    value)
-                                                        ;; :suggestedMax 100
-                                                        }
+                                                        :max y-max
+                                                        :callback (fn [value index values] value)}
                                                 :gridLines {:color "rgba(255,255,255, 0.05)"}
-                                                :type "logarithmic"}]}
+                                                :type y-scale-type}]}
                               ;; :plugins {:legend}
                               }
                              options)}]])
