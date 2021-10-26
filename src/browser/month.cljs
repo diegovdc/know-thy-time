@@ -209,6 +209,37 @@
                                         true)])
                (seq @edit-activity-modal-state)
                close-modal))
+
+(defn- numerical-options [min* max*]
+  (concat [[:option {:key :default
+                     :value :default
+                     :disabled true} "Select a level"]]
+          (map (fn [n] [:option {:key n :value n} n])
+               (range min* max*))))
+
+(defn day-quality-modal []
+  (utils/modal "Day quality"
+               [:div {:class "form-width"}
+                (utils/select "Energy Level (low to high)" nil identity
+                              (numerical-options 1 6))
+                (utils/select "Mood Level (bad to great)" 4 identity
+                              (numerical-options 1 6))
+                (utils/select "Productivity Level (low to high)" 4 identity
+                              (numerical-options 1 6))
+                (utils/select "Stress Level (none to high)" 4 identity
+                              (numerical-options 1 6))
+                (utils/tags-select "Emotions and other states of being"
+                                   [] js/console.log
+                                   [{:key "1" :label "Happy"}
+                                    {:key "2" :label "Sad"}]
+                                   :placeholder "  Type something")
+                (utils/input "Notes" "" identity
+                             :as "textarea")
+                (utils/submit-btn "Save" identity :disabled false)
+                ]
+               true
+               close-modal))
+
 (defn main []
   (r/create-class
    {:component-did-mount
@@ -230,6 +261,7 @@
           [:div
            [:h1 (d/format (js/Date. year month ) "MMM Y")]
            (edit-activity-modal dates)
+           (day-quality-modal)
            [:div
             (doall
              (map (fn [{day-name :name  day :day}]

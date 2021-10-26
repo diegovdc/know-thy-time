@@ -2,6 +2,7 @@
   (:require [goog.string :as gstr]
             [goog.string.format]
             ["react-bootstrap" :as rb]
+            ["react-selectrix" :as select]
             [clojure.string :as str]
             [react-bootstrap-icons :as icons]
             [date-fns :as d]))
@@ -65,11 +66,12 @@
 (defn percentage-string [number]
   (str (format-float number) "%"))
 
-(defn input [label value on-change & {:keys [placeholder type step]}]
+(defn input [label value on-change & {:keys [placeholder type step as]}]
   [:> rb/Form.Group {:control-id label}
    [:> rb/Form.Label label]
    [:> rb/Form.Control
     {:type type
+     :as as
      :defaultValue value
      :step (or step 1)
      :placeholder placeholder
@@ -104,8 +106,23 @@
    [:> rb/Form.Control
     {:as "select"
      :value value
+     :defaultValue :default
      :on-change on-change}
     options]])
+
+(defn tags-select
+  ;; https://github.com/stratos-vetsos/react-selectrix
+  [label value on-change options & {:keys [placeholder]}]
+  [:> rb/Form.Group {:control-id label}
+   [:> rb/Form.Label label]
+   [:div {:class "tags-select"}
+    [:> select/default
+     {:multiple true
+      :materialize true
+      :tags true
+      :options options
+      :placeholder placeholder
+      :onChange on-change}]]])
 
 (defn submit-btn [text on-click & {:keys [disabled]}]
   [:div

@@ -255,3 +255,22 @@ body {
     margin: 0 5px;
   }
 }
+
+.tags-select {
+  & .react-selectrix.rs-base-materialize .rs-header {
+    border-radius: 4px;
+  }
+  & .react-selectrix.rs-base-multiple .rs-selection {
+    background-color: #00bc8c;
+    border-color: #00bc8c;
+  }
+  &
+    .react-selectrix.rs-base-materialize.rs-base-multiple
+    .rs-header
+    .rs-focused {
+    &:focus {
+      border: #00bc8c 4px solid;
+      border-radius: 4px;
+    }
+  }
+}
