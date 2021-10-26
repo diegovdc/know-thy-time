@@ -294,6 +294,8 @@
               (println query)
               (* fixed-time days-in-month)))
 
+(rf/reg-sub :states-of-being (fn [db _] (:states-of-being db)))
+
 (comment @(rf/subscribe [:days-in-month])
          @(rf/subscribe [:available-hours])
          @(rf/subscribe [:year-month])
