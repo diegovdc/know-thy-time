@@ -9,11 +9,12 @@
    title
    [:> Bar {:data data
             :height chart-height
-            :options (merge {:legend {:labels {:boxWidth 0}}
-                             :scales {:yAxes [{:ticks {:beginAtZero true
-                                                       :suggestedMax 100}
-                                               :gridLines {:color "rgba(255,255,255, 0.05)"}}]}}
-                            options)}]])
+            :options
+            (merge {:plugins {:legend {:labels {:boxWidth 0}}}
+                    :scales {:yAxes [{:ticks {:beginAtZero true
+                                              :suggestedMax 100}
+                                      :gridLines {:color "rgba(255,255,255, 0.05)"}}]}}
+                   options)}]])
 
 (defn line [title data & {:keys [chart-height options y-scale-type y-max]
                           :or {y-scale-type "logarithmic"
@@ -23,16 +24,17 @@
    title
    [:> Line {:data data
              :height chart-height
-             :options (merge {:legend {:labels {:boxWidth 0}}
-                              :scales {:yAxes [{:ticks {:beginAtZero true
-                                                        :min 1
-                                                        :max y-max
-                                                        :callback (fn [value index values] value)}
-                                                :gridLines {:color "rgba(255,255,255, 0.05)"}
-                                                :type y-scale-type}]}
-                              ;; :plugins {:legend}
-                              }
-                             options)}]])
+             :options (merge
+                       {:scales
+                        {:yAxes [{:ticks {:beginAtZero true
+                                          :min 1
+                                          :max y-max
+                                          :callback (fn [value index values] value)}
+                                  :gridLines {:color "rgba(255,255,255, 0.05)"}
+                                  :type y-scale-type}]}
+                        ;; :plugins {:legend}
+                        }
+                       options)}]])
 
 (defn pie [title data & {:keys [options]}]
   [:div {:style {:width "100%"}}

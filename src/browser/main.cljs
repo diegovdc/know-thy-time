@@ -583,6 +583,7 @@
                           (let [data (map (fn [hrs] (* 100 (/ hrs (:estimated-hours (month-category-hours cat))))) hrs)]
                             {:label cat
                              :data hrs ;; data
+                             ;; FIXME tooltip doesn't seem to be showing the correct data
                              :tooltipLabels (map (fn [perc hrs]
                                                    (utils/fmt-str "%s% (%shrs)"
                                                                   (utils/format-float perc)

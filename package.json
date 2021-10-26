@@ -24,7 +24,7 @@
   "license": "MIT",
   "dependencies": {
     "bootstrap": "^4.5.3",
-    "chart.js": "^2.9.4",
+    "chart.js": "^3.6.0",
     "date-fns": "^2.16.1",
     "highlight.js": "10.7.1",
     "react": "16.13.0",
