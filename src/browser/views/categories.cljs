@@ -315,4 +315,6 @@
                   :backgroundColor background-colors
                   :borderColor border-colors
                   :tooltipLabels tooltip-labels
-                  :borderWidth 1}]})))
+                  :borderWidth 1}]
+      :x-title {:display true :text "Category"}
+      :y-title {:display true :text "Percentage"}})))

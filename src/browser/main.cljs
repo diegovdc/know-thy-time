@@ -558,7 +558,10 @@
                   :backgroundColor background-colors
                   :tooltipLabels tooltip-labels
                   :borderColor border-colors
-                  :borderWidth 1}]})))
+                  :borderWidth 1}]
+      :x-title {:display true :text "Activity"}
+      :y-title {:display true :text "Percentage"}
+      })))
 
 (do
   (defn accumulate-time [acts-by-day days-in-month]
@@ -584,13 +587,13 @@
           datasets (map (fn [[cat hrs]]
                           (let [data (map (fn [hrs] (* 100 (/ hrs (:estimated-hours (month-category-hours cat))))) hrs)]
                             {:label cat
-                             :data hrs ;; data
-                             ;; FIXME tooltip doesn't seem to be showing the correct data
-                             :tooltipLabels (map (fn [perc hrs]
-                                                   (utils/fmt-str "%s% (%shrs)"
-                                                                  (utils/format-float perc)
-                                                                  (utils/format-float hrs)))
-                                                 data hrs)
+                             :data hrs
+                             :tooltipLabels
+                             (map (fn [perc hrs]
+                                    (utils/fmt-str "%shrs (%s%)"
+                                                   (utils/format-float perc)
+                                                   (utils/format-float hrs)))
+                                  data hrs)
                              :borderColor (-> cat categories-colors
                                               utils/get-color-string)
                              :backgroundColor (-> cat categories-colors
@@ -599,7 +602,9 @@
                         time-by-cat)]
       {:labels labels
        :datasets datasets
-       :y-max y-max})))
+       :y-max y-max
+       :x-title {:display true :text "Day of month"}
+       :y-title {:display true :text "Hours"}})))
 
 (comment
   (month-activities-histogram [@(rf/subscribe [:activities-of-month])
