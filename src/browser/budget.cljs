@@ -112,8 +112,11 @@
 
 
 (defn get-tooltip-labels
-  [tooltip-item data]
-  (get-in (js->clj data) ["datasets" 0 "tooltipLabels" (.-index tooltip-item)]))
+  [tooltip-item]
+  (let [tip (js->clj tooltip-item)
+        idx (tip "dataIndex")
+        labels (get-in tip ["dataset" "tooltipLabels"])]
+    (nth labels idx "")))
 
 (defn main []
   (let [fixed-time @(rf/subscribe [:fixed-time])
@@ -145,23 +148,32 @@
          (graphs/line ""
                       cats-histogram
                       :chart-height 100
-                      :options {:tooltips
-                                {:callbacks
-                                 {:label get-tooltip-labels}}}
                       :y-scale-type "linear"
-                      :y-max (max (cats-histogram :y-max) 100))
+                      :y-max (max (cats-histogram :y-max) 100)
+                      :x-title (cats-histogram :x-title)
+                      :y-title (cats-histogram :y-title)
+                      :options {:plugins
+                                {:tooltip
+                                 {:callbacks
+                                  {:label get-tooltip-labels}}}})
          (graphs/bars ""
                       acts-graph-data
-                      :options {:tooltips
-                                {:callbacks
-                                 {:label get-tooltip-labels}}})
+                      :x-title (acts-graph-data :x-title)
+                      :y-title (acts-graph-data :y-title)
+                      :options {:plugins
+                                {:tooltip
+                                 {:callbacks
+                                  {:label get-tooltip-labels}}}})
 
          (graphs/bars ""
                       cats-graph-data
                       :chart-height 65
-                      :options {:tooltips
-                                {:callbacks
-                                 {:label get-tooltip-labels}}})]]
+                      :x-title (cats-graph-data :x-title)
+                      :y-title (cats-graph-data :y-title)
+                      :options {:plugins
+                                {:tooltip
+                                 {:callbacks
+                                  {:label get-tooltip-labels}}}})]]
        ["Fixed and free time"
         (fixed-and-free-time cat fixed-time free-time month-free-time)]
        ["Monthly Budget"
