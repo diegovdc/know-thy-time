@@ -126,13 +126,13 @@
                         (into {}))
 
         categories-options
-        (cons [:option {:key "---"}
+        (cons [:option {:key "---" :value ""}
                "Choose a category"]
               (map (fn [cat] [:option {:key cat :value cat} cat])
                    categories))
 
         acts-for-cat (activities (@activity-atom :cat []))
-        activities-options (cons [:option {:key "---"}
+        activities-options (cons [:option {:key "---" :value ""}
                                   "Choose an activity"]
                                  (map (fn [[act]]
                                         [:option {:key act :value act} act])
@@ -207,7 +207,7 @@
                                         edit-activity-modal-state
                                         10
                                         true)])
-               (seq @edit-activity-modal-state)
+               (not (nil? (seq @edit-activity-modal-state)))
                close-modal))
 
 (defn has-day-quality? [year month day]

@@ -66,7 +66,9 @@
 (defn percentage-string [number]
   (str (format-float number) "%"))
 
-(defn input [label value on-change & {:keys [placeholder type step as]}]
+(defn input [label value on-change &
+             {:keys [placeholder type step as]
+              :or {as "input"}}]
   [:> rb/Form.Group {:control-id label}
    [:> rb/Form.Label label]
    [:> rb/Form.Control
