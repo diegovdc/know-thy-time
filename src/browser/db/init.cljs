@@ -9,4 +9,6 @@
 
 (defn get-day-qualities [] (reader/read-string (js/localStorage.getItem "day-qualities")))
 
+(defn get-states-of-being [] (reader/read-string (js/localStorage.getItem "states-of-being")))
+
 (def initial-alert {:variant nil :msg nil})

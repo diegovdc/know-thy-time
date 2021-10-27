@@ -21,7 +21,7 @@
 (defn set-val [f k v] (swap! modal-state assoc k (f v)))
 
 (defn- numerical-options [min* max*]
-  (concat [[:option {:key :default} "Select a level"]]
+  (concat [[:option {:key :default :value ""} "Select a level"]]
           (map (fn [n] [:option {:key n :value n} n])
                (range min* max*))))
 
