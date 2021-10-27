@@ -596,6 +596,7 @@
   (defn accumulate-time [acts-by-day days-in-month]
     (reduce (fn [acc day]
               (conj acc (->> (acts-by-day day [])
+                             (remove :todo?)
                              (map :time)
                              (apply + (or (last acc) 0)))))
             []
