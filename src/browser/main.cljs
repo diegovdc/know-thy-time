@@ -48,6 +48,8 @@
 
 (rf/reg-event-db :set-month (fn [db [_ year]] (assoc db :month year)))
 
+(rf/reg-fx :reload-window (fn [] (js/window.location.reload)))
+
 (rf/reg-event-fx
  :restore-backup
  (fn [{:keys [db]} [_ backup]]
@@ -56,7 +58,8 @@
          [:save-activities]
          [:save-fixed-time]
          [:save-states-of-being]
-         [:save-day-qualities]]}))
+         [:save-day-qualities]
+         [:reload-window]]}))
 
 (rf/reg-event-fx
  :create-category
