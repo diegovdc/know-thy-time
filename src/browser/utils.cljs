@@ -168,3 +168,6 @@
                                 :on-click close}
                          [:> icons/XCircle]]]]
    [:> rb/Modal.Body body]])
+
+
+(defn checkmark [] [:>  icons/Check2Circle{:class "checkmark-icon"}])

@@ -210,6 +210,8 @@
                (seq @edit-activity-modal-state)
                close-modal))
 
+(defn has-day-quality? [year month day]
+  (get-in @(rf/subscribe [:day-qualities/get-all]) [year month day]))
 
 (defn main []
   (r/create-class
@@ -246,9 +248,13 @@
                            :on-click (fn [] (swap! create-activity #(if (= % day-name) nil day-name)))}
                           (if create? "-" "New activity")]]]
                        [:div
-                        (utils/submit-btn
-                         "Day Qualities"
-                         (fn [] (dq/open-modal year month day day-name)))
+                        [:div {:class "d-flex"}
+                         (utils/submit-btn
+                          "Day Qualities"
+                          (fn [] (dq/open-modal year month day day-name)))
+                         (when (has-day-quality? year month day)
+                           #_[:span]
+                           (utils/checkmark))]
                         (daily-activity-data activities)
                         (render-activity-form :create-activity
                                               ::db/day-activity-draft
