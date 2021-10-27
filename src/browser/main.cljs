@@ -105,7 +105,6 @@
 (rf/reg-event-fx
  :update-category-color
  (fn [{:keys [db]} [_ category color]]
-   (println category color)
    {:db (let [cat (-> db :categories (get category)
                       (->> (map (fn [[k data]]
                                   [k (assoc data :color color)]))
@@ -205,7 +204,6 @@
 
 (rf/reg-event-fx
  :close-alert
-
  (fn [{:keys [db]} [_]]
    {:db (assoc db :alert db-init/initial-alert)}))
 
@@ -223,6 +221,18 @@
  :save-fixed-time
  (fn []
    (js/localStorage.setItem "fixed-time" (pr-str @(rf/subscribe [:fixed-time])))))
+
+(rf/reg-fx
+ :save-states-of-being
+ (fn []
+   (js/localStorage.setItem "states-of-being"
+                            (pr-str @(rf/subscribe [:states-of-being])))))
+
+(rf/reg-fx
+ :save-day-qualities
+ (fn []
+   (js/localStorage.setItem "day-qualities"
+                            (pr-str @(rf/subscribe [:day-qualities/get-all])))))
 
 
 ;; -- Domino 4 - Query  -------------------------------------------------------
@@ -291,7 +301,6 @@
             :<- [:available-hours]
             :<- [:days-in-month]
             (fn [[fixed-time days-in-month] [_ query]]
-              (println query)
               (* fixed-time days-in-month)))
 
 (rf/reg-sub :states-of-being (fn [db _] (:states-of-being db)))
@@ -574,7 +583,6 @@
 
   (defn month-activities-histogram
     [[acts-of-month days-in-month categories-colors month-category-hours] _]
-    (println "MMMMMMMMM" month-category-hours)
     (let [time-by-cat (->> acts-of-month
                            (mapcat vals)
                            (group-by :cat)

@@ -1,7 +1,11 @@
 (ns browser.db
   (:require [browser.db.init
              :refer
-             [get-activities get-categories get-fixed-time initial-alert]]
+             [get-activities
+              get-categories
+              get-fixed-time
+              get-day-qualities
+              initial-alert]]
             [browser.views.categories :as categories]
             [clojure.spec.alpha :as s]
             [date-fns :as d]
@@ -14,6 +18,9 @@
                         :activities (get-activities)
                         :categories (get-categories)
                         :fixed-time (get-fixed-time)
+                        :day-qualities (get-day-qualities)
+                        :states-of-being [{:id  "b146d915-3619-4ee6-915f-8317e8629898" :name "Hola"}
+                                          {:id  "c146d915-3619-4ee6-915f-8317e8629898" :name "Adios"}]
                         :alert initial-alert
                         :year (d/getYear (js/Date.))
                         :month (d/getMonth (js/Date.))

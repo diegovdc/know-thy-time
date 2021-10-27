@@ -106,28 +106,32 @@
    [:> rb/Form.Control
     {:as "select"
      :value value
-     :defaultValue :default
      :on-change on-change}
     options]])
 
 (defn tags-select
   ;; https://github.com/stratos-vetsos/react-selectrix
-  [label value on-change options & {:keys [placeholder]}]
+  [label value on-change options
+   & {:keys [placeholder custom-keys]}]
   [:> rb/Form.Group {:control-id label}
    [:> rb/Form.Label label]
+   (js/console.log (clj->js value))
    [:div {:class "tags-select"}
     [:> select/default
      {:multiple true
       :materialize true
       :tags true
+      :defaultValue (clj->js (map #(get % "key") value))
       :options options
       :placeholder placeholder
+      :customKeys custom-keys
       :onChange on-change}]]])
 
-(defn submit-btn [text on-click & {:keys [disabled]}]
+(defn submit-btn [text on-click & {:keys [disabled variant]
+                                   :or {variant "success"}}]
   [:div
    [:> rb/Button
-    {:variant "success"
+    {:variant variant
      :on-click on-click
      :disabled disabled}
     text]])
@@ -158,7 +162,7 @@
 
 
 (defn modal [title body show? close]
-  [:> rb/Modal {:show show?}
+  [:> rb/Modal {:show show? :on-hide (fn [])}
    [:> rb/Modal.Header [:div [:> rb/Modal.Title title]
                         [:button {:class "modal__close"
                                 :on-click close}

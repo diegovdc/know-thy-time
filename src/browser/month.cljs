@@ -2,6 +2,7 @@
   (:require ["date-fns" :as d]
             ["react-bootstrap" :as rb]
             [browser.db :as db]
+            [browser.day-qualities.modal :refer [day-quality-modal] :as dq]
             [browser.utils :as utils :refer [format-float get-category-value]]
             [browser.views.categories :as categories]
             [clojure.spec.alpha :as s]
@@ -86,7 +87,6 @@
         total-free-time (- 24 total-activity-time)
         fixed-time @(rf/subscribe [:fixed-time])
         available-time (->> (apply + (vals fixed-time)) (- total-free-time))]
-    (println activity-time)
     [:div
      [:p {:class (str "mb-1" (when (> 0 available-time) " text-danger "))}
       "Available time: " (format-float available-time)]
@@ -210,35 +210,6 @@
                (seq @edit-activity-modal-state)
                close-modal))
 
-(defn- numerical-options [min* max*]
-  (concat [[:option {:key :default
-                     :value :default
-                     :disabled true} "Select a level"]]
-          (map (fn [n] [:option {:key n :value n} n])
-               (range min* max*))))
-
-(defn day-quality-modal []
-  (utils/modal "Day quality"
-               [:div {:class "form-width"}
-                (utils/select "Energy Level (low to high)" nil identity
-                              (numerical-options 1 6))
-                (utils/select "Mood Level (bad to great)" 4 identity
-                              (numerical-options 1 6))
-                (utils/select "Productivity Level (low to high)" 4 identity
-                              (numerical-options 1 6))
-                (utils/select "Stress Level (none to high)" 4 identity
-                              (numerical-options 1 6))
-                (utils/tags-select "Emotions and other states of being"
-                                   [] js/console.log
-                                   [{:key "1" :label "Happy"}
-                                    {:key "2" :label "Sad"}]
-                                   :placeholder "  Type something")
-                (utils/input "Notes" "" identity
-                             :as "textarea")
-                (utils/submit-btn "Save" identity :disabled false)
-                ]
-               true
-               close-modal))
 
 (defn main []
   (r/create-class
@@ -275,6 +246,9 @@
                            :on-click (fn [] (swap! create-activity #(if (= % day-name) nil day-name)))}
                           (if create? "-" "New activity")]]]
                        [:div
+                        (utils/submit-btn
+                         "Day Qualities"
+                         (fn [] (dq/open-modal year month day day-name)))
                         (daily-activity-data activities)
                         (render-activity-form :create-activity
                                               ::db/day-activity-draft
