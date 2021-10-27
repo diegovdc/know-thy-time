@@ -10,8 +10,7 @@
   [:div {:style {:background-color "black"
                  :width "100%"}}
    title
-   [:> Bar {:redraw true
-            :data data
+   [:> Bar {:data data
             :height chart-height
             :options
             (merge-with merge
@@ -35,8 +34,7 @@
   [:div {:style {:background-color "black"
                  :width "100%"}}
    title
-   [:> Line {:redraw true
-             :data data
+   [:> Line {:data data
              :height chart-height
              :options (merge-with
                        merge
@@ -56,4 +54,4 @@
 (defn pie [title data & {:keys [options]}]
   [:div {:style {:width "100%"}}
    title
-   [:> Pie {:redraw true :data data :options options}]])
+   [:> Pie {:data data :options options}]])
