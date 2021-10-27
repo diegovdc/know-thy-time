@@ -11,7 +11,7 @@
             [date-fns :as d]
             [re-frame.core :as rf]))
 
-(defn initialize-db [] {:version "0.0.1"
+(defn initialize-db [] {:version "0.0.2" ;; TODO save this version in localStorage
                         :current-route nil
                         :router nil
                         :show-privacy-wall? (if-not goog.DEBUG true false)
@@ -19,8 +19,8 @@
                         :categories (get-categories)
                         :fixed-time (get-fixed-time)
                         :day-qualities (get-day-qualities)
-                        :states-of-being [{:id  "b146d915-3619-4ee6-915f-8317e8629898" :name "Hola"}
-                                          {:id  "c146d915-3619-4ee6-915f-8317e8629898" :name "Adios"}]
+                        :states-of-being [{:id "b146d915-3619-4ee6-915f-8317e8629898" :name "Hola"}
+                                          {:id "c146d915-3619-4ee6-915f-8317e8629898" :name "Adios"}]
                         :alert initial-alert
                         :year (d/getYear (js/Date.))
                         :month (d/getMonth (js/Date.))
