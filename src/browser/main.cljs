@@ -54,7 +54,9 @@
    {:db (merge db backup)
     :fx [[:save-categories]
          [:save-activities]
-         [:save-fixed-time]]}))
+         [:save-fixed-time]
+         [:save-states-of-being]
+         [:save-day-qualities]]}))
 
 (rf/reg-event-fx
  :create-category
@@ -241,19 +243,34 @@
 
 (rf/reg-sub
  :backup
- (fn [{:keys [version activities categories fixed-time]} _]
+ (fn [{:keys [version
+             activities
+             categories
+             fixed-time
+             states-of-being
+             day-qualities]} _]
    (pr-str {:version version
             :activities activities
             :categories categories
-            :fixed-time fixed-time})))
+            :fixed-time fixed-time
+            :states-of-being states-of-being
+            :day-qualities day-qualities})))
+
 
 (rf/reg-sub
  :backup-json
- (fn [{:keys [version activities categories fixed-time]} _]
+ (fn [{:keys [version
+             activities
+             categories
+             fixed-time
+             states-of-being
+             day-qualities]} _]
    (js/JSON.stringify (clj->js {:version version
                                 :activities activities
                                 :categories categories
-                                :fixed-time fixed-time}))))
+                                :fixed-time fixed-time
+                                :states-of-being states-of-being
+                                :day-qualities day-qualities}))))
 
 (comment
   (:year @(rf/subscribe [:db]))
