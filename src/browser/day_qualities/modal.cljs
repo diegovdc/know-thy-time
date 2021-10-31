@@ -6,7 +6,7 @@
             [clojure.set :as set]
             [browser.day-qualities.state :refer [is-valid?]]))
 
-(defonce modal-state (r/atom {}))
+(defonce modal-state (r/atom {:day 4}))
 
 (defn open-modal [year month day day-name]
   (reset! modal-state
@@ -32,40 +32,51 @@
                 creativity-level
                 stress-level
                 states-of-being
+                sleep-hours
+                sleep-quality
                 notes]} @modal-state
         states-of-being-options @(rf/subscribe [:states-of-being])]
-    ;; TODO (left of here) need to create the daily-quality and create the new states of being
     (utils/modal
      (utils/fmt-str "Day qualities for: %s" (or day-name ""))
-     [:div {:class "form-width"}
-      (utils/select "Energy Level (low to high)" energy-level
-                    #(set-val utils/get-input-number :energy-level %)
-                    (numerical-options 1 6))
-      (utils/select "Productivity Level (low to high)" productivity-level
-                    #(set-val utils/get-input-number :productivity-level %)
-                    (numerical-options 1 6))
-      (utils/select "Creativity Level (low to high)" creativity-level
-                    #(set-val utils/get-input-number :creativity-level %)
-                    (numerical-options 1 6))
-      (utils/select "Stress Level (none to high)" stress-level
-                    #(set-val utils/get-input-number :stress-level %)
-                    (numerical-options 1 6))
-      (utils/select "Mood Level (bad to great)" mood-level
-                    #(set-val utils/get-input-number :mood-level %)
-                    (numerical-options 1 6))
-      (utils/tags-select "Emotions and other states of being"
-                         (map #(set/rename-keys % {:id "key" :name "label"})
-                              states-of-being)
-                         #(set-val js->clj :states-of-being %)
-                         (map #(set/rename-keys % {:id "key" :name "label"})
-                              states-of-being-options)
-                         :placeholder "  Type something")
-      (utils/input "Notes" notes
-                   #(set-val utils/get-input-string :notes %)
-                   :as "textarea")
-      (utils/submit-btn "Save"
-                        #(rf/dispatch [:day-qualities/create-day @modal-state])
-                        ;; :disabled (not (is-valid? @modal-state))
-                        )]
+     [:div {:class "day-qualities-modal__form"}
+      [:div {:class "day-qualities-modal__col-1"}
+       (utils/select "Energy Level (low to high)" energy-level
+                     #(set-val utils/get-input-number :energy-level %)
+                     (numerical-options 1 6))
+       (utils/select "Productivity Level (low to high)" productivity-level
+                     #(set-val utils/get-input-number :productivity-level %)
+                     (numerical-options 1 6))
+       (utils/select "Creativity Level (low to high)" creativity-level
+                     #(set-val utils/get-input-number :creativity-level %)
+                     (numerical-options 1 6))
+       (utils/select "Stress Level (none to high)" stress-level
+                     #(set-val utils/get-input-number :stress-level %)
+                     (numerical-options 1 6))
+       (utils/select "Mood Level (bad to great)" mood-level
+                     #(set-val utils/get-input-number :mood-level %)
+                     (numerical-options 1 6))
+       (utils/select "Sleep hours (day before)" sleep-hours
+                     #(set-val utils/get-input-number :sleep-hours %)
+                     (numerical-options 1 12))
+       (utils/select "Sleep quality (bad to great, day before)" sleep-quality
+                     #(set-val utils/get-input-number :sleep-quality %)
+                     (numerical-options 1 15))
+       (utils/tags-select "Emotions and other states of being"
+                          (map #(set/rename-keys % {:id "key" :name "label"})
+                               states-of-being)
+                          #(set-val js->clj :states-of-being %)
+                          (map #(set/rename-keys % {:id "key" :name "label"})
+                               states-of-being-options)
+                          :placeholder "  Type something")]
+      [:div {:class "day-qualities-modal__col-2"}
+       (utils/input "Notes" notes
+                    #(set-val utils/get-input-string :notes %)
+                    :as "textarea")
+       [:p {:class "text-center"}
+        (utils/submit-btn "Save"
+                          #(rf/dispatch [:day-qualities/create-day @modal-state])
+                          ;; :disabled (not (is-valid? @modal-state))
+                          )]]]
      (not (nil? (@modal-state :day)))
-     close-modal)))
+     close-modal
+     :class "day-qualities-modal")))

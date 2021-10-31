@@ -67,13 +67,14 @@
   (str (format-float number) "%"))
 
 (defn input [label value on-change &
-             {:keys [placeholder type step as]
-              :or {as "input"}}]
+             {:keys [placeholder type step as rows]
+              :or {as "input" rows 10}}]
   [:> rb/Form.Group {:control-id label}
    [:> rb/Form.Label label]
    [:> rb/Form.Control
     {:type type
      :as as
+     :rows rows
      :defaultValue value
      :step (or step 1)
      :placeholder placeholder
@@ -163,11 +164,12 @@
     [:> icons/Trash]]])
 
 
-(defn modal [title body show? close]
-  [:> rb/Modal {:show show? :on-hide (fn [])}
+(defn modal [title body show? close
+             & {:keys [class]}]
+  [:> rb/Modal {:show show? :on-hide (fn []) :class class}
    [:> rb/Modal.Header [:div [:> rb/Modal.Title title]
                         [:button {:class "modal__close"
-                                :on-click close}
+                                  :on-click close}
                          [:> icons/XCircle]]]]
    [:> rb/Modal.Body body]])
 

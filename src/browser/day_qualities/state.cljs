@@ -27,13 +27,17 @@
                          productivity-level
                          creativity-level
                          stress-level
-                         states-of-being]}]
+                         states-of-being
+                         sleep-hours
+                         sleep-quality]}]
   (and
    (every? int? [energy-level
                  mood-level
                  productivity-level
                  creativity-level
-                 stress-level])
+                 stress-level
+                 sleep-hours
+                 sleep-quality])
    (seq states-of-being)
    (not (zero? states-of-being))))
 

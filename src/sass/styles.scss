@@ -274,3 +274,21 @@ body {
     }
   }
 }
+
+.day-qualities {
+  &-modal {
+    .modal-dialog {
+      max-width: 900px;
+    }
+    &__form {
+    }
+    &__col-1 {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    &__col-2 {
+      flex-grow: 2;
+    }
+  }
+}
