@@ -6,7 +6,7 @@
             [clojure.set :as set]
             [browser.day-qualities.state :refer [is-valid?]]))
 
-(defonce modal-state (r/atom {:day 4}))
+(defonce modal-state (r/atom {}))
 
 (defn open-modal [year month day day-name]
   (reset! modal-state
