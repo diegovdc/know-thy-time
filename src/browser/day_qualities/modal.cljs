@@ -60,7 +60,7 @@
                      (numerical-options 1 12))
        (utils/select "Sleep quality (bad to great, day before)" sleep-quality
                      #(set-val utils/get-input-number :sleep-quality %)
-                     (numerical-options 1 15))
+                     (numerical-options 1 6))
        (utils/tags-select "Emotions and other states of being"
                           (map #(set/rename-keys % {:id "key" :name "label"})
                                states-of-being)
