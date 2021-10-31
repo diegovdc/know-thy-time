@@ -8,3 +8,4 @@ target/
 .lsp/
 /backups
 .cpcache
+#*
