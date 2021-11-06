@@ -2,7 +2,7 @@
   (:require ["date-fns" :as d]
             ["react-bootstrap" :as rb]
             [browser.db :as db]
-            [browser.day-qualities.modal :refer [day-quality-modal] :as dq]
+            [browser.day-qualities.modal :as dq]
             [browser.utils :as utils :refer [format-float get-category-value]]
             [browser.views.categories :as categories]
             [clojure.spec.alpha :as s]
@@ -210,9 +210,6 @@
                (not (nil? (seq @edit-activity-modal-state)))
                close-modal))
 
-(defn has-day-quality? [year month day]
-  (get-in @(rf/subscribe [:day-qualities/get-all]) [year month day]))
-
 (defn main []
   (r/create-class
    {:component-did-mount
@@ -234,7 +231,7 @@
           [:div
            [:h1 (d/format (js/Date. year month ) "MMM Y")]
            (edit-activity-modal dates)
-           (day-quality-modal)
+           (dq/modal)
            [:div
             (doall
              (map (fn [{day-name :name  day :day}]
@@ -248,13 +245,7 @@
                            :on-click (fn [] (swap! create-activity #(if (= % day-name) nil day-name)))}
                           (if create? "-" "New activity")]]]
                        [:div
-                        [:div {:class "d-flex"}
-                         (utils/submit-btn
-                          "Day Qualities"
-                          (fn [] (dq/open-modal year month day day-name)))
-                         (when (has-day-quality? year month day)
-                           #_[:span]
-                           (utils/checkmark))]
+                        (dq/button year month day day-name)
                         (daily-activity-data activities)
                         (render-activity-form :create-activity
                                               ::db/day-activity-draft

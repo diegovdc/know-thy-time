@@ -4,7 +4,7 @@
             [re-frame.core :as rf]
             [reagent.core :as r]
             [clojure.set :as set]
-            [browser.day-qualities.state :refer [is-valid?]]))
+            [browser.day-qualities.state :refer [is-valid? is-incomplete?]]))
 
 (defonce modal-state (r/atom {}))
 
@@ -25,7 +25,7 @@
           (map (fn [n] [:option {:key n :value n} n])
                (range min* max*))))
 
-(defn day-quality-modal []
+(defn modal []
   (let [{:keys [day-name energy-level
                 mood-level
                 productivity-level
@@ -80,3 +80,22 @@
      (not (nil? (@modal-state :day)))
      close-modal
      :class "day-qualities-modal")))
+
+
+(defn status-checkmark [year month day]
+  (let [day-quality (get-in @(rf/subscribe [:day-qualities/get-all])
+                            [year month day])]
+    (cond (is-valid? day-quality)
+          (utils/checkmark :class "checkmark-icon--success")
+
+          (is-incomplete? day-quality)
+          (utils/checkmark
+           :class "checkmark-icon--warning"
+           :title "Some qualities are missing, please finish completing them."))))
+
+(defn button [year month day day-name]
+  [:div {:class "d-flex"}
+   (utils/submit-btn
+    "Day Qualities"
+    (fn [] (open-modal year month day day-name)))
+   (status-checkmark year month day)])

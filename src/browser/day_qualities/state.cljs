@@ -41,6 +41,31 @@
    (seq states-of-being)
    (not (zero? states-of-being))))
 
+(defn is-incomplete? [{:keys [energy-level
+                              mood-level
+                              productivity-level
+                              creativity-level
+                              stress-level
+                              states-of-being
+                              sleep-hours
+                              sleep-quality]}]
+  (let [validation (conj (map int? [energy-level
+                                    mood-level
+                                    productivity-level
+                                    creativity-level
+                                    stress-level
+                                    sleep-hours
+                                    sleep-quality])
+                         (not (empty? states-of-being)))]
+    (boolean
+     (and (some true? validation)
+          (not (every? true? validation))))))
+
+(comment (is-valid?
+          (get-in @(rf/subscribe [:day-qualities/get-all]) [2021 10 2]))
+         (is-incomplete?
+          (get-in @(rf/subscribe [:day-qualities/get-all]) [2021 10 3])))
+
 (defn new-tag?
   "New tags do not have a UUID yet"
   [tag]
@@ -94,26 +119,22 @@
 
 (defn create-day-quality
   [{:keys [db]} [_ {:keys [year month day states-of-being] :as data}]]
-  (js/console.log "CREATING")
-  (if-not (is-valid? data)
-    {:db (assoc db :alert
-                {:variant "danger"
-                 :msg "There are errors or missing fields in the day qualities form"})}
-    (let [{:keys [old new]} (define-old-and-new-tags
-                              (db :states-of-being)
-                              states-of-being)
-          updated-db (-> db
-                         (update :states-of-being concat new)
-                         (assoc-in [:day-qualities year month day]
-                                   (assoc data
-                                          :states-of-being (concat old new)
-                                          :date [year month day]) ))]
-      (js/console.log updated-db)
-      {:db updated-db
-       :fx [[:save-states-of-being]
-            [:save-day-qualities]
-            [:dispatch [:close-alert]]
-            [:day-qualities-modal/close]]})))
+  (js/console.debug "CREATING day quality")
+  (let [{:keys [old new]} (define-old-and-new-tags
+                            (db :states-of-being)
+                            states-of-being)
+        updated-db (-> db
+                       (update :states-of-being concat new)
+                       (assoc-in [:day-qualities year month day]
+                                 (assoc data
+                                        :states-of-being (concat old new)
+                                        :date [year month day]) ))]
+    (js/console.log updated-db)
+    {:db updated-db
+     :fx [[:save-states-of-being]
+          [:save-day-qualities]
+          [:dispatch [:close-alert]]
+          [:day-qualities-modal/close]]}))
 
 (comment (-> (create-day-quality
               {:db @(rf/subscribe [:db])}
@@ -126,6 +147,6 @@
                     :creativity-level 4
                     :stress-level 4
                     :states-of-being [{:id "tag-hola" :name "hoLa"}
-                                              {:id "tag-holas" :name "holas"}]}])
+                                      {:id "tag-holas" :name "holas"}]}])
              :db
              (select-keys [:day-qualities :states-of-being])))

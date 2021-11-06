@@ -174,4 +174,7 @@
    [:> rb/Modal.Body body]])
 
 
-(defn checkmark [] [:>  icons/Check2Circle{:class "checkmark-icon"}])
+(defn checkmark [& {:keys [class title] :or {class ""}}]
+  [:span {:title title}
+   [:>  icons/Check2Circle
+    {:class (str "checkmark-icon " class)}]])

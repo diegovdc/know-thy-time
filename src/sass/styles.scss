@@ -292,3 +292,14 @@ body {
     }
   }
 }
+
+.checkmark-icon {
+  width: 1.5em;
+  height: 1.5em;
+  &--success {
+    fill: var(--success);
+  }
+  &--warning {
+    fill: var(--warning);
+  }
+}
