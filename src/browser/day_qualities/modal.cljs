@@ -35,7 +35,8 @@
                 sleep-hours
                 sleep-quality
                 notes]} @modal-state
-        states-of-being-options @(rf/subscribe [:states-of-being])]
+        states-of-being-options (sort-by :name
+                                         @(rf/subscribe [:states-of-being]))]
     (utils/modal
      (utils/fmt-str "Day qualities for: %s" (or day-name ""))
      [:div {:class "day-qualities-modal__form"}
@@ -73,10 +74,9 @@
                     #(set-val utils/get-input-string :notes %)
                     :as "textarea")
        [:p {:class "text-center"}
-        (utils/submit-btn "Save"
-                          #(rf/dispatch [:day-qualities/create-day @modal-state])
-                          ;; :disabled (not (is-valid? @modal-state))
-                          )]]]
+        (utils/submit-btn
+         "Save"
+         #(rf/dispatch [:day-qualities/create-day @modal-state]))]]]
      (not (nil? (@modal-state :day)))
      close-modal
      :class "day-qualities-modal")))

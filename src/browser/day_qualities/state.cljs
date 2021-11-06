@@ -4,8 +4,10 @@
             [clojure.string :as str]))
 
 (declare create-day-quality)
+
 (rf/reg-sub :day-qualities/get-all
             (fn [db _] (db :day-qualities)))
+
 
 (rf/reg-sub :day-qualities/get-day
             (fn [db [_ year month day day-name]]
