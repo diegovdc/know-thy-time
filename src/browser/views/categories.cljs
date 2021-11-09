@@ -15,26 +15,34 @@
 (defn get-cat-config-dates [categories] (-> (first categories) second keys))
 (defn get-previous-configured-month
   "Look for the closest previous month registered in categories.
-  If the current-year/month hasbeen configured, then it returns that one
+  If the current-year/month has been configured, then it returns that one
   Assumes all categories have at least a `:default` and if alrheady updated a
   shared latest `[year month]` config. Therefore it only needs to pick the first
   category to find whe want"
   [categories [current-year current-month]]
   (->> (get-cat-config-dates categories)
        (remove #(= :default %))
-       (sort-by (juxt first second) >)
+       (sort-by (juxt first second))
+       reverse
        (drop-while (fn [[year month]]
                      ;; Remove more recent dates than the current year/month
-                     (and (>= year current-year)
-                          (> month current-month))))
+                     (or (> year current-year)
+                         (and (= year current-year)
+                              (> month current-month)))))
        first
        (#(or % :default))))
 
-(comment (get-previous-configured-month
-          {"cat-a" {:default {}
-                    [2020 12] {}
-                    [2021 2] {}}}
-          [2021 2]))
+(comment
+  (get-previous-configured-month
+   @(rf/subscribe [:categories])
+   [@(rf/subscribe [:year])
+    @(rf/subscribe [:month])])
+  (get-previous-configured-month
+   {"cat-a" {:default {}
+             [2020 12] {}
+             [2021 2] {}
+             [2022 2] {}}}
+   [2021 2]))
 
 (rf/reg-sub
  ::current-configured-month
