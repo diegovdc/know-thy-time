@@ -170,33 +170,15 @@
      [:p (gstr/format "Total hours: %s, still free hours: %s "
                       (utils/format-float total-hours)
                       (utils/format-float (- total-hours projected-hours)))]
-     (render-activities cat-name (data :activities))
-
-     ]))
+     (render-activities cat-name (data :activities))]))
 
 (def new-category (r/atom ""))
 
 (defn left-column [categories]
-  (let [year-month @(rf/subscribe [::current-configured-month])
-        fixed-time @(rf/subscribe [:fixed-time])
+  (let [fixed-time @(rf/subscribe [:fixed-time])
         available-hours (- 24 (apply + (vals fixed-time)))
         available-hours-month (* 30 available-hours)]
-    [:div
-     [:div {:class "mb-3 mw-300"}
-      (utils/input-with-btn
-       "New category" "Create" @new-category
-       #(reset! new-category (utils/get-input-string %))
-       (fn []
-         (rf/dispatch [:create-category @new-category])
-         (reset! new-category "")))]
-     [:div {:class "mb-3"}
-      [:div "Total allocated time: " (utils/categories-total-percentage
-                                      categories
-                                      year-month) "%"]
-      [:div (gstr/format "Total available hours: %s/day, %s/month "
-                         (utils/format-float available-hours)
-                         (utils/format-float available-hours-month))]]
-     (doall (map (partial render-category available-hours-month) categories))]))
+    [:div (doall (map (partial render-category available-hours-month) categories))]))
 
 
 (defn categories-data [categories]
@@ -214,10 +196,28 @@
                                        cat-data)}]}))
 
 (defn right-column [categories]
-  [:div {:class "w-100"}
-   [:div {:style {:position "sticky" :top 0}}
-    (graphs/pie "" (categories-data categories)
-                :options {:legend {:labels {:fontColor "white" :fontSize 20}}})]])
+  (let [year-month @(rf/subscribe [::current-configured-month])
+        fixed-time @(rf/subscribe [:fixed-time])
+        available-hours (- 24 (apply + (vals fixed-time)))
+        available-hours-month (* 30 available-hours)]
+    [:div {:class "categories__right-col"}
+     [:div {:style {:position "sticky" :top 30}}
+      [:div {:class "mb-3 mw-300"}
+       (utils/input-with-btn
+        "New category" "Create" @new-category
+        #(reset! new-category (utils/get-input-string %))
+        (fn []
+          (rf/dispatch [:create-category @new-category])
+          (reset! new-category "")))]
+      [:div {:class "mb-3"}
+       [:div "Total allocated time: " (utils/categories-total-percentage
+                                       categories
+                                       year-month) "%"]
+       [:div (gstr/format "Total available hours: %s/day, %s/month "
+                          (utils/format-float available-hours)
+                          (utils/format-float available-hours-month))]]
+      (graphs/pie "" (categories-data categories)
+                  :options {:legend {:labels {:fontColor "white" :fontSize 20}}})]]))
 
 (defn title []
   (let [year-month @(rf/subscribe [::current-configured-month])
