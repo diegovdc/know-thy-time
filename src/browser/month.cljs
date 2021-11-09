@@ -131,7 +131,7 @@
               (map (fn [cat] [:option {:key cat :value cat} cat])
                    categories))
 
-        acts-for-cat (activities (@activity-atom :cat []))
+        acts-for-cat (sort-by first (activities (@activity-atom :cat [])))
         activities-options (cons [:option {:key "---" :value ""}
                                   "Choose an activity"]
                                  (map (fn [[act]]
