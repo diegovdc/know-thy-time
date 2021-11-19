@@ -42,7 +42,7 @@
                         {:x {:title x-title }
                          :y {:title y-title
                              :beginAtZero true
-                             :ticks {:min 1
+                             :ticks {:min 0
                                      :max y-max
                                      :callback (fn [value index values] value)}
                              :gridLines {:color "rgba(255,255,255, 0.05)"}

@@ -454,11 +454,14 @@
                              (let [data (map second acts)]
                                {:label (utils/fmt-str "%s (%s)" act cat)
                                 :data data
+                                :fill true
+                                :cubicInterpolationMode "monotone"
+                                :tension 0.4
                                 :total-hrs (apply + data)
                                 :borderColor (-> cat categories-colors
                                                  utils/get-color-string)
                                 :backgroundColor (-> cat categories-colors
-                                                     (assoc "a" 0.2)
+                                                     (assoc "a" 0.1)
                                                      utils/get-color-string)
                                 })))
                       (sort-by (comp (partial * -1) :total-hrs))

@@ -17,10 +17,25 @@
                        :day day
                        :day-name day-name})))
 
+(rf/reg-sub :day-qualities/get-month
+            (fn [db [_ year month]]
+              (->> (get-in db [:day-qualities year month])
+                   vals
+                   (sort-by :day))))
+
+(rf/reg-sub :day-qualities/get-current-month
+            (fn [db _]
+              (let [{:keys [year month]} db]
+                (->> (get-in db [:day-qualities year month])
+                     vals
+                     (sort-by :day)))))
+
 (rf/reg-event-fx :day-qualities/create-day #'create-day-quality)
 
 (comment @(rf/subscribe [:day-qualities/get-all])
-         @(rf/subscribe [:day-qualities/get-day 2021 9 28]))
+         @(rf/subscribe [:day-qualities/get-day 2021 9 28])
+         @(rf/subscribe [:day-qualities/get-month 2021 9])
+         @(rf/subscribe [:day-qualities/get-current-month]))
 
 
 

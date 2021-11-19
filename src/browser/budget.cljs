@@ -1,12 +1,13 @@
 (ns browser.budget
-  (:require [browser.graphs :as graphs]
-            [browser.utils :as utils]
-            [browser.views.categories :as categories]
-            [re-frame.core :as rf]
-            [react-bootstrap :as rb]
-            [date-fns :as d]))
-
-
+  (:require
+   [browser.graphs :as graphs]
+   [browser.utils :as utils]
+   [browser.views.categories :as categories]
+   [browser.day-qualities.histograms :as dq-histograms]
+   [date-fns :as d]
+   [re-frame.core :as rf]
+   [react-bootstrap :as rb]
+   [browser.day-qualities.modal :as dq]))
 
 (rf/reg-sub
  ;; From 0-100
@@ -110,14 +111,6 @@
       [:p {:class "mb-0"} [:b [:u free-time]] " hrs/day"]
       [:p {:class "mb-0"} [:b [:u month-free-time]] " hrs/month"]]]))
 
-
-(defn get-tooltip-labels
-  [tooltip-item]
-  (let [tip (js->clj tooltip-item)
-        idx (tip "dataIndex")
-        labels (get-in tip ["dataset" "tooltipLabels"])]
-    (nth labels idx "")))
-
 (defn main []
   (let [fixed-time @(rf/subscribe [:fixed-time])
         {:keys [free-time month-free-time]} @(rf/subscribe [:free-time])
@@ -155,7 +148,7 @@
                       :options {:plugins
                                 {:tooltip
                                  {:callbacks
-                                  {:label get-tooltip-labels}}}})
+                                  {:label utils/get-tooltip-labels}}}})
          (graphs/bars ""
                       acts-graph-data
                       :x-title (acts-graph-data :x-title)
@@ -163,8 +156,7 @@
                       :options {:plugins
                                 {:tooltip
                                  {:callbacks
-                                  {:label get-tooltip-labels}}}})
-
+                                  {:label utils/get-tooltip-labels}}}})
          (graphs/bars ""
                       cats-graph-data
                       :chart-height 65
@@ -173,7 +165,9 @@
                       :options {:plugins
                                 {:tooltip
                                  {:callbacks
-                                  {:label get-tooltip-labels}}}})]]
+                                  {:label  utils/get-tooltip-labels}}}})
+
+         (dq-histograms/month-histogram)]]
        ["Fixed and free time"
         (fixed-and-free-time cat fixed-time free-time month-free-time)]
        ["Monthly Budget"

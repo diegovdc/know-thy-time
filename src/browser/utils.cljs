@@ -11,6 +11,8 @@
 
 (defn fmt-ym-date [y m] (d/format (js/Date. y m) "MMM Y"))
 
+(defn fmt-day-date [y m d] (d/format (js/Date. y m d) "E i"))
+
 (defn get-category-value [year-month category]
   ;; FIXME convert into a subscription
   (cond (vector? year-month) (get category year-month)
@@ -38,7 +40,7 @@
                (get color "r")
                (get color "g")
                (get color "b")
-               (get color "a")))
+               (get color "a" 1)))
 
 (defn render-dot [rgba-color size & {:keys [style]}]
   [:span {:style (merge {:height size
@@ -178,3 +180,10 @@
   [:span {:title title}
    [:>  icons/Check2Circle
     {:class (str "checkmark-icon " class)}]])
+
+(defn get-tooltip-labels
+  [tooltip-item]
+  (let [tip (js->clj tooltip-item)
+        idx (tip "dataIndex")
+        labels (get-in tip ["dataset" "tooltipLabels"])]
+    (nth labels idx "")))
