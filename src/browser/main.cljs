@@ -619,9 +619,9 @@
                              :data hrs
                              :tooltipLabels
                              (map (fn [perc hrs]
-                                    (utils/fmt-str "%shrs (%s%)"
-                                                   (utils/format-float perc)
-                                                   (utils/format-float hrs)))
+                                    (utils/fmt-str "%s hrs (%s%)"
+                                                   (utils/format-float hrs)
+                                                   (utils/format-float perc)))
                                   data hrs)
                              :borderColor (-> cat categories-colors
                                               utils/get-color-string)
