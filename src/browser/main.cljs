@@ -300,6 +300,17 @@
             :<- [:year]
             :<- [:month]
             (fn [[year month] _] [year month]))
+(rf/reg-sub :today
+            :<- [:year]
+            :<- [:month]
+            (fn [[year month] _] [year month (.getDate (js/Date.))]))
+
+(rf/reg-sub :todays-todos
+            :<- [:today]
+            :<- [:activities]
+            (fn [[today acts] _]
+              (->> (get-in  acts today)
+                   (filter (comp :todo? val)))))
 
 (rf/reg-sub :categories-colors
             (fn [db _] (->> (:categories db)

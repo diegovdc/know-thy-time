@@ -10,7 +10,8 @@
             [reitit.frontend.controllers :as rfc]
             [reitit.frontend.easy :as rfe]
             [react-bootstrap-icons :as icons]
-            [cljs.reader :as reader]))
+            [cljs.reader :as reader]
+            [browser.utils :as utils]))
 
 ;;; Events ;;;
 
@@ -137,9 +138,15 @@
 
 
 (defn privacy-wall []
-  (when  @(re-frame/subscribe [:show-privacy-wall?])
-    [:div {:class "privacy-wall"}
-     [:h1 "Know thy time"]]))
+  (let [show-privacy-wall? @(re-frame/subscribe [:show-privacy-wall?])
+        todos @(re-frame/subscribe [:todays-todos])
+        total-todos (count todos)]
+    (when show-privacy-wall?
+      [:div {:class "privacy-wall"}
+       [:div [:h1 "Know thy time"]
+        (when-not (zero? total-todos)
+          [:p {:class "privacy-wall__todos text-warning"}
+           (utils/fmt-str "To do items left for today: %s" total-todos)])]])))
 
 (defn router-component [{:keys [router]}]
   (let [current-route @(re-frame/subscribe [::current-route])]
