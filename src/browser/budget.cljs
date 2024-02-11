@@ -45,7 +45,7 @@
 (defn monthly-budget [categories spent-time-by-cat month-free-time]
   (let [cats-data
         (map (fn [[cat data]]
-               (let [cat-data (categories/get-category-value data)
+               (let [cat-data data
                      cat-color (categories/get-category-color cat)
                      sched-time (spent-time-by-cat cat 0)
                      total-time (/ (* month-free-time (cat-data :percentage)) 100)
@@ -114,7 +114,7 @@
 (defn main []
   (let [fixed-time @(rf/subscribe [:fixed-time])
         {:keys [free-time month-free-time]} @(rf/subscribe [:free-time])
-        cats @(rf/subscribe [::categories/current-month-categories])
+        cats @(rf/subscribe [:month-categories])
         acts @(rf/subscribe [:activities])
         year  @(rf/subscribe [:year])
         month @(rf/subscribe [:month])

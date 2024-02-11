@@ -27,8 +27,6 @@
 
 (defn todo-str [todo?] (if todo? "(todo)" ""))
 
-
-
 (defn render-activities [day-name activities]
   [:div {:class "d-flex month__activity"}
    (if-not (-> @show-activities (get day-name))
@@ -39,14 +37,13 @@
       (->> activities
            (map
             (fn [{:keys [cat act time description id todo?] :as activity}]
-              (let [year-month @(rf/subscribe [::categories/current-configured-month])
-                    category (-> @(rf/subscribe [:categories]) (get-in [cat year-month]))]
+              (let [category (-> @(rf/subscribe [:month-categories]))]
                 (when category
                   [:div {:key id :class "month__activity_event"}
                    [:div {:class "ml-2"}
 
                     [:p {:class (str "mb-0 " (when todo? "text-info"))}
-                     [:span {:class "mr-1"} (utils/render-dot (:color category) 16)]
+                     [:span {:class "mr-1"} (utils/render-dot (categories/get-category-color cat) 16)]
                      (gstr/format "%s %s %shr%s" (todo-str todo?) act time (if (= time 1) "" "s"))
 
                      (when todo?
@@ -117,12 +114,11 @@
   (let [year-month @(rf/subscribe [::categories/current-configured-month])
         year @(rf/subscribe [:year])
         month @(rf/subscribe [:month])
-        categories-data @(rf/subscribe [:categories])
+        categories-data @(rf/subscribe [:month-categories])
         categories (->> categories-data keys sort)
         activities (->> categories-data
                         (map (fn [[cat data]]
-                               [cat (:activities
-                                     (get-category-value year-month data))]))
+                               [cat (:activities data)]))
                         (into {}))
 
         categories-options

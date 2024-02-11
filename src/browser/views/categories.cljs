@@ -1,18 +1,18 @@
 (ns browser.views.categories
-  (:require ["react-bootstrap" :as rb]
-            ["react-color" :as color]
-            [browser.graphs :as graphs]
-            [browser.utils :as utils]
-            [clojure.string :as str]
-            [date-fns :as d]
-            [goog.string :as gstr]
-            goog.string.format
-            [re-frame.core :as rf]
-            [react-bootstrap-icons :as icons]
-            [reagent.core :as r]))
+  (:require
+   ["react-color" :as color]
+   [browser.graphs :as graphs]
+   [browser.utils :as utils :refer [checkbox]]
+   [date-fns :as d]
+   [goog.string :as gstr]
+   goog.string.format
+   [re-frame.core :as rf]
+   [reagent.core :as r]))
 
+(defn get-cat-config-dates
+  [categories]
+  (-> (first categories) second keys))
 
-(defn get-cat-config-dates [categories] (-> (first categories) second keys))
 (defn get-previous-configured-month
   "Look for the closest previous month registered in categories.
   If the current-year/month has been configured, then it returns that one
@@ -77,8 +77,9 @@
    [2021 2]
    [2021 3]))
 
-(defn ensure-category-configs-exist-in-month [db]
+(defn ensure-category-configs-exist-in-month
   "Takes the db and returns the db with categories with the updated configs"
+  [db]
   (let [categories (:categories db)
         current-year (:year db)
         current-month (:month db)
@@ -126,7 +127,7 @@
            (swap! new-activity assoc category-name (utils/get-input-string %)))
       #(do (rf/dispatch [:create-category-activity
                          ;; TODO maybe the activity should exist in previous months?
-                         [category-name year-month :activities new-act] {:hrs 0} ])
+                         [category-name year-month :activities new-act] {:hrs 0}])
            (swap! new-activity dissoc category-name)))]))
 
 (defn render-activities [category-name activities]
@@ -156,10 +157,15 @@
         color (data :color {:r (rand-int 255) :g (rand-int 255) :b (rand-int 255) :a 1})]
     [:div {:key cat-name :class "mb-4"}
      [:h2 {:class "categories__title"}
+      ;; FIXME input should dissappear when `:archived?`
+      ;; or be disabled and a toast shown when user tries to modify it
       (cat-input data
                  :percentage (str cat-name ": ")
                  [cat-name year-month :percentage]
-                 utils/get-input-number
+                 (fn [ev]
+                   (if (:archived? data)
+                     0
+                     (utils/get-input-number ev)))
                  "number")
       [:span {:class "categories__percentage"} "%"]
       [:span {:on-click #(toggle-color-picker cat-name)}
@@ -170,6 +176,17 @@
      [:p (gstr/format "Total hours: %s, still free hours: %s "
                       (utils/format-float total-hours)
                       (utils/format-float (- total-hours projected-hours)))]
+     [:div (checkbox
+             "Archived"
+             (:archived? data false)
+              (fn [archived?]
+                (rf/dispatch
+                  [:update-category [cat-name year-month :archived?] archived?])
+                (when archived?
+                  (rf/dispatch
+                    [:update-category
+                     [cat-name year-month :percentage]
+                     0]))))]
      (render-activities cat-name (data :activities))]))
 
 (def new-category (r/atom ""))
@@ -180,12 +197,8 @@
         available-hours-month (* 30 available-hours)]
     [:div (doall (map (partial render-category available-hours-month) categories))]))
 
-
-(defn categories-data [categories]
-  (let [year-month (get-previous-configured-month categories @(rf/subscribe [:year-month]))
-        cat-data (->>  categories
-                       (map (fn [[cat val]]
-                              [cat (-> val (get year-month))]))
+(defn categories-data [month-active-categories]
+  (let [cat-data (->>  month-active-categories
                        (sort-by (comp  :percentage second)))]
     {:labels (map first cat-data)
      :datasets [{:label "Allocated Time"
@@ -227,74 +240,81 @@
         date (d/format (js/Date. year month) "MMMM Y")]
     [:h1 (str "Categories " date)]))
 
+(defn get-current-month-categories
+  [[year-month categories] _]
+  (if (= year-month :default)
+    categories
+    (filter (fn [[_ data]]
+              ((set (keys data)) year-month))
+            categories)))
+(comment
+  @(rf/subscribe [::current-month-categories]))
 
 (rf/reg-sub
- ;; Returns only the categories that are available on the currently selected month
+  ;; Returns only the categories that are available on the currently selected month
  ::current-month-categories
  :<- [::current-configured-month]
  :<- [:categories]
- (fn [[year-month categories] _]
-   (if (= year-month :default)
-     categories
-     (filter (fn [[_ data]]
-               ((set (keys data)) year-month))
-             categories))))
+ #'get-current-month-categories)
 
 (defn main []
-  (let [categories @(rf/subscribe [::current-month-categories])]
+  (let [categories @(rf/subscribe [::current-month-categories])
+        active-categories @(rf/subscribe [:month-categories])]
     [:div (title)
      [:div {:class "d-flex"}
       (left-column categories)
-      (right-column categories)]]))
+      (right-column active-categories)]]))
+(comment
+  @(rf/subscribe [::current-month-categories]))
 
 (defn get-category-value [category]
   (let [year-month @(rf/subscribe [::current-configured-month])]
     (get category year-month)))
 
 (defn get-category-color [category]
-  (-> @(rf/subscribe [:categories]) (get category) :default :color) )
+  (-> @(rf/subscribe [:categories]) (get category) :default :color))
 (comment @(rf/subscribe [:categories]))
-(do
-  (defn month-category-hours [[cats acts year-month {:keys [month-free-time]}] _]
-    (let [acts* (-> acts
-                    (get-in year-month)
-                    vals
-                    (->> (mapcat vals)
-                         (remove :todo?)
-                         (group-by :cat)))]
-      (->> cats
-           (map (fn [[cat data]] [cat (let [perc (:percentage (get data year-month))
-                                           total-hours (apply + (map :time (get acts* cat)))
-                                           estimated-hours (-> perc (/ 100) (* month-free-time))]
-                                       {:category cat
-                                        :percentage perc
-                                        :advance (* 100 (/ total-hours estimated-hours))
-                                        :estimated-hours estimated-hours
-                                        :total-hours total-hours})]))
-           (into {}))))
-  (comment
-    (month-category-hours [@(rf/subscribe [::current-month-categories])
-                           @(rf/subscribe [:activities])
-                           @(rf/subscribe [:year-month])
-                           @(rf/subscribe [:free-time])] nil)))
+
+(defn month-category-hours [[cats acts year-month {:keys [month-free-time]}] _]
+  (let [acts* (-> acts
+                  (get-in year-month)
+                  vals
+                  (->> (mapcat vals)
+                       (remove :todo?)
+                       (group-by :cat)))]
+    (->> cats
+         (map (fn [[cat data]]
+                [cat (let [perc (:percentage data)
+                           total-hours (apply + (map :time (get acts* cat)))
+                           estimated-hours (-> perc (/ 100) (* month-free-time))]
+                       {:category cat
+                        :percentage perc
+                        :advance (* 100 (/ total-hours estimated-hours))
+                        :estimated-hours estimated-hours
+                        :total-hours total-hours})]))
+         (into {}))))
+(comment
+  (month-category-hours [@(rf/subscribe [:month-categories])
+                         @(rf/subscribe [:activities])
+                         @(rf/subscribe [:year-month])
+                         @(rf/subscribe [:free-time])] nil))
 (rf/reg-sub
  ::month-category-hours
- :<- [::current-month-categories]
+ :<- [:month-categories]
  :<- [:activities]
  :<- [:year-month]
  :<- [:free-time]
  month-category-hours)
-#_@(rf/subscribe [::month-category-hours])
+(comment
+  @(rf/subscribe [::month-category-hours]))
 (rf/reg-sub
  ::monthly-categories-graph-data
- :<- [::current-month-categories]
+ :<- [:month-categories]
  :<- [::current-configured-month]
  :<- [::month-category-hours]
  (fn [[categories current-configured-month
       month-category-hours] _]
-   (let [cats (->> categories
-                   (map (fn [[cat val]] [cat (get val current-configured-month)]))
-                   (into {}))
+   (let [cats (->> categories)
          cat-data (->> month-category-hours
                        vals
                        (sort-by :total-hours)
@@ -306,7 +326,7 @@
                                      (assoc "a" 0.3)
                                      utils/get-color-string)
                                 cat-names)
-         border-colors (map #(-> cats (get %)
+         border-colors (map #(-> categories (get %)
                                  :color
                                  utils/get-color-string)
                             cat-names)

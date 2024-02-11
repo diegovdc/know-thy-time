@@ -293,6 +293,7 @@
                                    {:free-time free-time
                                     :month-free-time month-free-time})))
 (rf/reg-sub :categories (fn [db _] (:categories db)))
+
 (rf/reg-sub :activities (fn [db _] (:activities db)))
 (rf/reg-sub :month (fn [db _] (:month db)))
 (rf/reg-sub :year (fn [db _] (:year db)))
@@ -357,6 +358,7 @@
             (fn [[categories year-month] _]
               (->> categories
                    (map (fn [[cat val]] [cat (get val year-month)]))
+                   (remove (fn [[_cat val]]  (:archived? val)))
                    (into {}))))
 
 (rf/reg-sub :show-privacy-wall? (fn [db _] (:show-privacy-wall? db)))

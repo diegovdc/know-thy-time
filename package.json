@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "description": "ClojureScript project setup with Shadow-CLJS",
   "scripts": {
+    "re-frisk-remote": "shadow-cljs run re-frisk-remote.core/start",
     "release": "run-s release:*",
     "release:app": "shadow-cljs release app",
     "watch:app": "shadow-cljs watch app",
     "release:library": "shadow-cljs release library",
     "watch:library": "shadow-cljs watch library",
-    "release:browser": "shadow-cljs release browser && npm run sass",
+    "release:browser": ". ./ensure_java_version.sh && shadow-cljs release browser && npm run sass",
     "watch:browser": "shadow-cljs watch browser",
     "start:browser": "serve -s build/browser",
     "sass:watch": "sass src/sass/styles.scss build/browser/styles.css --watch",
@@ -19,7 +20,7 @@
     "npm-run-all": "^4.1.5",
     "sass": "^1.30.0",
     "serve": "^11.1.0",
-    "shadow-cljs": "^2.8.39"
+    "shadow-cljs": "2.26.5"
   },
   "license": "MIT",
   "dependencies": {
