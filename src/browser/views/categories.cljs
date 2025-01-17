@@ -223,9 +223,9 @@
           (rf/dispatch [:create-category @new-category])
           (reset! new-category "")))]
       [:div {:class "mb-3"}
-       [:div "Total allocated time: " (utils/categories-total-percentage
-                                       categories
-                                       year-month) "%"]
+       [:div "Total allocated time: "
+        (utils/categories-total-percentage categories)
+        "%"]
        [:div (gstr/format "Total available hours: %s/day, %s/month "
                           (utils/format-float available-hours)
                           (utils/format-float available-hours-month))]]

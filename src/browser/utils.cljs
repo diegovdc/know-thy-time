@@ -28,12 +28,11 @@
   ;; FIXME convert into a subscription
   "Total percentage of time allocated to all categories.
   Useful for knowing if there is still time to be distributed or not"
-  ([categories] (categories-total-percentage categories nil))
-  ([categories year-month]
-   (->> categories vals
-        (map (fn [cat]
-               (:percentage (get-category-value year-month cat))))
-        (apply +))))
+  [categories]
+  (->> categories
+       vals
+       (map :percentage)
+       (apply +)))
 
 (defn get-color-string [color]
   (gstr/format "rgba(%s, %s,  %s, %s)"
