@@ -147,7 +147,7 @@
       :on-change-complete
       #(rf/dispatch
         [:update-category-color cat-name
-         (-> % js->clj (get "rgb") )])}]))
+         (-> % js->clj (get "rgb"))])}]))
 
 (defn render-category [available-hours-month [cat-name cat-data]]
   (let [year-month @(rf/subscribe [::current-configured-month])
@@ -177,16 +177,16 @@
                       (utils/format-float total-hours)
                       (utils/format-float (- total-hours projected-hours)))]
      [:div (checkbox
-             "Archived"
-             (:archived? data false)
-              (fn [archived?]
+            "Archived"
+            (:archived? data false)
+            (fn [archived?]
+              (rf/dispatch
+               [:update-category [cat-name year-month :archived?] archived?])
+              (when archived?
                 (rf/dispatch
-                  [:update-category [cat-name year-month :archived?] archived?])
-                (when archived?
-                  (rf/dispatch
-                    [:update-category
-                     [cat-name year-month :percentage]
-                     0]))))]
+                 [:update-category
+                  [cat-name year-month :percentage]
+                  0]))))]
      (render-activities cat-name (data :activities))]))
 
 (def new-category (r/atom ""))
@@ -313,7 +313,7 @@
  :<- [::current-configured-month]
  :<- [::month-category-hours]
  (fn [[categories current-configured-month
-      month-category-hours] _]
+       month-category-hours] _]
    (let [cats (->> categories)
          cat-data (->> month-category-hours
                        vals

@@ -87,12 +87,12 @@
    [:> rb/Form.Control
     {:type "checkbox"
      :checked checked?
-     :on-change #(-> % .-target .-checked on-change) }]])
+     :on-change #(-> % .-target .-checked on-change)}]])
 
 (defn input-with-btn
   [placeholder btn-text value on-change on-click
    & {:keys [btn-variant]
-      :or {btn-variant "success"}} ]
+      :or {btn-variant "success"}}]
   [:> rb/InputGroup
    [:> rb/FormControl {:placeholder placeholder
                        :aria-label placeholder
@@ -164,7 +164,6 @@
      :on-click on-click}
     [:> icons/Trash]]])
 
-
 (defn modal [title body show? close
              & {:keys [class]}]
   [:> rb/Modal {:show show? :on-hide (fn []) :class class}
@@ -173,7 +172,6 @@
                                   :on-click close}
                          [:> icons/XCircle]]]]
    [:> rb/Modal.Body body]])
-
 
 (defn checkmark [& {:keys [class title] :or {class ""}}]
   [:span {:title title}
