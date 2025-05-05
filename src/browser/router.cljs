@@ -56,7 +56,6 @@
   ([k params query]
    (rfe/href k params query)))
 
-
 (defn on-navigate [new-match]
   (when new-match
     (re-frame/dispatch [::navigated new-match])))
@@ -75,15 +74,17 @@
      {:use-fragment true})
     router))
 
-
 (defn backup-link []
   (let [backup @(re-frame/subscribe [:backup])
         now (-> (js/Date.) .toISOString)
-        filename (str "know-thy-time-backup-" now ".edn")]
-    [:li [:a {:id "download-backup"
-              :href (str "data:text/plain;charset=utf-8," backup)
-              :download filename}
-          [:> icons/Download]]]))
+        filename (str "know-thy-time-backup-" now ".edn")
+        blob-url (-> (js/Blob. #js [backup] #js {:type "text/plain"})
+                     (js/URL.createObjectURL))]
+    [:li
+     [:a {:id "download-backup"
+          :href blob-url
+          :download filename}
+      [:> icons/Download]]]))
 
 (defn parse-file-and-restore-backup!
   [event]
@@ -132,10 +133,8 @@
                :params (dutils/next-month year month)}
               {:route-name ::routes/categories}
               {:route-name ::routes/fixed-time}
-              {:route-name ::routes/histogram}])
-        ]
+              {:route-name ::routes/histogram}])]
     [:ul {:class "d-flex justify-content-around menu"} routes (backup-link) (restore-button)]))
-
 
 (defn privacy-wall []
   (let [show-privacy-wall? @(re-frame/subscribe [:show-privacy-wall?])
