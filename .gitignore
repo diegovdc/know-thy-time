@@ -10,3 +10,5 @@ target/
 .cpcache
 **/.#*
 **/#*
+**/.DS_Store
+**/.cider-repl-history
